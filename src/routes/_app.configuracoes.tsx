@@ -1,11 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+type Item =
+  | { label: string; control: "switch"; value: boolean }
+  | { label: string; control: "select"; options: string[]; value: string };
+type Section = { title: string; items: Item[] };
+
 export const Route = createFileRoute("/_app/configuracoes")({
   component: Configuracoes,
   head: () => ({ meta: [{ title: "Configurações · AprovaIA" }] }),
 });
 
-const sections = [
+const sections: Section[] = [
   {
     title: "Aparência",
     items: [

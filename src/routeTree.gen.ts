@@ -9,27 +9,268 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppRedacaoRouteImport } from './routes/_app.redacao'
+import { Route as AppQuestoesRouteImport } from './routes/_app.questoes'
+import { Route as AppPremiumRouteImport } from './routes/_app.premium'
+import { Route as AppPerfilRouteImport } from './routes/_app.perfil'
+import { Route as AppIaRouteImport } from './routes/_app.ia'
+import { Route as AppEstatisticasRouteImport } from './routes/_app.estatisticas'
+import { Route as AppCronogramaRouteImport } from './routes/_app.cronograma'
+import { Route as AppConfiguracoesRouteImport } from './routes/_app.configuracoes'
 
-export interface FileRoutesByFullPath {}
-export interface FileRoutesByTo {}
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRedacaoRoute = AppRedacaoRouteImport.update({
+  id: '/redacao',
+  path: '/redacao',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuestoesRoute = AppQuestoesRouteImport.update({
+  id: '/questoes',
+  path: '/questoes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPremiumRoute = AppPremiumRouteImport.update({
+  id: '/premium',
+  path: '/premium',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPerfilRoute = AppPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIaRoute = AppIaRouteImport.update({
+  id: '/ia',
+  path: '/ia',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEstatisticasRoute = AppEstatisticasRouteImport.update({
+  id: '/estatisticas',
+  path: '/estatisticas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCronogramaRoute = AppCronogramaRouteImport.update({
+  id: '/cronograma',
+  path: '/cronograma',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => AppRoute,
+} as any)
+
+export interface FileRoutesByFullPath {
+  '/': typeof AppIndexRoute
+  '/onboarding': typeof OnboardingRoute
+  '/configuracoes': typeof AppConfiguracoesRoute
+  '/cronograma': typeof AppCronogramaRoute
+  '/estatisticas': typeof AppEstatisticasRoute
+  '/ia': typeof AppIaRoute
+  '/perfil': typeof AppPerfilRoute
+  '/premium': typeof AppPremiumRoute
+  '/questoes': typeof AppQuestoesRoute
+  '/redacao': typeof AppRedacaoRoute
+}
+export interface FileRoutesByTo {
+  '/onboarding': typeof OnboardingRoute
+  '/configuracoes': typeof AppConfiguracoesRoute
+  '/cronograma': typeof AppCronogramaRoute
+  '/estatisticas': typeof AppEstatisticasRoute
+  '/ia': typeof AppIaRoute
+  '/perfil': typeof AppPerfilRoute
+  '/premium': typeof AppPremiumRoute
+  '/questoes': typeof AppQuestoesRoute
+  '/redacao': typeof AppRedacaoRoute
+  '/': typeof AppIndexRoute
+}
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/_app': typeof AppRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
+  '/_app/configuracoes': typeof AppConfiguracoesRoute
+  '/_app/cronograma': typeof AppCronogramaRoute
+  '/_app/estatisticas': typeof AppEstatisticasRoute
+  '/_app/ia': typeof AppIaRoute
+  '/_app/perfil': typeof AppPerfilRoute
+  '/_app/premium': typeof AppPremiumRoute
+  '/_app/questoes': typeof AppQuestoesRoute
+  '/_app/redacao': typeof AppRedacaoRoute
+  '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: never
+  fullPaths:
+    | '/'
+    | '/onboarding'
+    | '/configuracoes'
+    | '/cronograma'
+    | '/estatisticas'
+    | '/ia'
+    | '/perfil'
+    | '/premium'
+    | '/questoes'
+    | '/redacao'
   fileRoutesByTo: FileRoutesByTo
-  to: never
-  id: '__root__'
+  to:
+    | '/onboarding'
+    | '/configuracoes'
+    | '/cronograma'
+    | '/estatisticas'
+    | '/ia'
+    | '/perfil'
+    | '/premium'
+    | '/questoes'
+    | '/redacao'
+    | '/'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/onboarding'
+    | '/_app/configuracoes'
+    | '/_app/cronograma'
+    | '/_app/estatisticas'
+    | '/_app/ia'
+    | '/_app/perfil'
+    | '/_app/premium'
+    | '/_app/questoes'
+    | '/_app/redacao'
+    | '/_app/'
   fileRoutesById: FileRoutesById
 }
-export interface RootRouteChildren {}
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {}
+export interface RootRouteChildren {
+  AppRoute: typeof AppRouteWithChildren
+  OnboardingRoute: typeof OnboardingRoute
 }
 
-const rootRouteChildren: RootRouteChildren = {}
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/redacao': {
+      id: '/_app/redacao'
+      path: '/redacao'
+      fullPath: '/redacao'
+      preLoaderRoute: typeof AppRedacaoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/questoes': {
+      id: '/_app/questoes'
+      path: '/questoes'
+      fullPath: '/questoes'
+      preLoaderRoute: typeof AppQuestoesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/premium': {
+      id: '/_app/premium'
+      path: '/premium'
+      fullPath: '/premium'
+      preLoaderRoute: typeof AppPremiumRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/perfil': {
+      id: '/_app/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AppPerfilRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ia': {
+      id: '/_app/ia'
+      path: '/ia'
+      fullPath: '/ia'
+      preLoaderRoute: typeof AppIaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/estatisticas': {
+      id: '/_app/estatisticas'
+      path: '/estatisticas'
+      fullPath: '/estatisticas'
+      preLoaderRoute: typeof AppEstatisticasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/cronograma': {
+      id: '/_app/cronograma'
+      path: '/cronograma'
+      fullPath: '/cronograma'
+      preLoaderRoute: typeof AppCronogramaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/configuracoes': {
+      id: '/_app/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AppConfiguracoesRouteImport
+      parentRoute: typeof AppRoute
+    }
+  }
+}
+
+interface AppRouteChildren {
+  AppConfiguracoesRoute: typeof AppConfiguracoesRoute
+  AppCronogramaRoute: typeof AppCronogramaRoute
+  AppEstatisticasRoute: typeof AppEstatisticasRoute
+  AppIaRoute: typeof AppIaRoute
+  AppPerfilRoute: typeof AppPerfilRoute
+  AppPremiumRoute: typeof AppPremiumRoute
+  AppQuestoesRoute: typeof AppQuestoesRoute
+  AppRedacaoRoute: typeof AppRedacaoRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppConfiguracoesRoute: AppConfiguracoesRoute,
+  AppCronogramaRoute: AppCronogramaRoute,
+  AppEstatisticasRoute: AppEstatisticasRoute,
+  AppIaRoute: AppIaRoute,
+  AppPerfilRoute: AppPerfilRoute,
+  AppPremiumRoute: AppPremiumRoute,
+  AppQuestoesRoute: AppQuestoesRoute,
+  AppRedacaoRoute: AppRedacaoRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  AppRoute: AppRouteWithChildren,
+  OnboardingRoute: OnboardingRoute,
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
