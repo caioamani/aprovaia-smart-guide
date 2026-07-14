@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   ArrowRight,
   Sparkles,
@@ -9,10 +10,10 @@ import {
   Target,
   Clock,
   TrendingUp,
-  BookOpen,
-  Brain,
-  PenLine,
 } from "lucide-react";
+import { studySessions, type MetricKey } from "@/lib/mock-study";
+import { MetricInfoDialog } from "@/components/MetricInfoDialog";
+import { ReorganizeAIDialog } from "@/components/ReorganizeAIDialog";
 
 export const Route = createFileRoute("/_app/")({
   component: Dashboard,
@@ -24,48 +25,33 @@ export const Route = createFileRoute("/_app/")({
   }),
 });
 
-const todayPlan = [
-  {
-    subject: "Matemática",
-    topic: "Logaritmos e propriedades",
-    duration: "45 min",
-    kind: "Teoria + 12 questões",
-    icon: BookOpen,
-    done: true,
-  },
-  {
-    subject: "Física",
-    topic: "Leis de Newton — aplicações",
-    duration: "60 min",
-    kind: "Simulação prática",
-    icon: Brain,
-    done: false,
-    active: true,
-  },
-  {
-    subject: "Redação",
-    topic: "Repertório sociocultural",
-    duration: "30 min",
-    kind: "Leitura crítica",
-    icon: PenLine,
-    done: false,
-  },
-  {
-    subject: "História",
-    topic: "Era Vargas — revisão espaçada",
-    duration: "25 min",
-    kind: "Flashcards IA",
-    icon: BookOpen,
-    done: false,
-  },
-];
-
 const weekBars = [40, 65, 50, 90, 75, 20, 10];
 const weekLabels = ["S", "T", "Q", "Q", "S", "S", "D"];
 
+const stats: {
+  key: MetricKey;
+  label: string;
+  value: string;
+  suffix?: string;
+  icon: typeof Flame;
+  tint: string;
+  delta?: string;
+}[] = [
+  { key: "streak", label: "Sequência", value: "12", suffix: "dias", icon: Flame, tint: "text-orange-400" },
+  { key: "time", label: "Tempo hoje", value: "2h 15m", icon: Clock, tint: "text-brand" },
+  { key: "accuracy", label: "Precisão média", value: "78%", icon: Target, tint: "text-emerald-400", delta: "+4%" },
+  { key: "tri", label: "TRI estimada", value: "742.5", icon: TrendingUp, tint: "text-indigo-400", delta: "+18" },
+];
+
 function Dashboard() {
+  const navigate = useNavigate();
+  const [metricOpen, setMetricOpen] = useState<MetricKey | null>(null);
+  const [reorgOpen, setReorgOpen] = useState(false);
+
+  const activeSession = studySessions.find((s) => s.active) ?? studySessions[0];
+
   return (
-    <div className="p-8 space-y-8 max-w-[1400px]">
+    <div className="p-8 space-y-8 max-w-[1400px] animate-fade-in">
       {/* Greeting */}
       <section className="grid grid-cols-12 gap-8 items-end">
         <div className="col-span-8">
@@ -82,11 +68,17 @@ function Dashboard() {
           </p>
         </div>
         <div className="col-span-4 flex gap-3 justify-end">
-          <button className="px-4 py-2.5 rounded-lg bg-surface ring-1 ring-hairline text-sm font-medium hover:bg-white/5 transition inline-flex items-center gap-2">
+          <button
+            onClick={() => setReorgOpen(true)}
+            className="px-4 py-2.5 rounded-lg bg-surface ring-1 ring-hairline text-sm font-medium hover:bg-white/5 hover:ring-brand/30 transition inline-flex items-center gap-2 active:scale-[0.98]"
+          >
             <Sparkles className="size-3.5 text-brand" />
             Reorganizar com IA
           </button>
-          <button className="px-5 py-2.5 rounded-lg bg-brand text-brand-foreground text-sm font-semibold hover:bg-brand/90 transition inline-flex items-center gap-2 shadow-[0_0_0_1px_var(--color-brand)]">
+          <button
+            onClick={() => navigate({ to: "/sessao/$id", params: { id: activeSession.id } })}
+            className="px-5 py-2.5 rounded-lg bg-brand text-brand-foreground text-sm font-semibold hover:bg-brand/90 transition inline-flex items-center gap-2 shadow-[0_0_0_1px_var(--color-brand)] active:scale-[0.98]"
+          >
             <Play className="size-3.5 fill-current" />
             Retomar
           </button>
@@ -95,15 +87,11 @@ function Dashboard() {
 
       {/* Stats row */}
       <section className="grid grid-cols-4 gap-4">
-        {[
-          { label: "Sequência", value: "12", suffix: "dias", icon: Flame, tint: "text-orange-400" },
-          { label: "Tempo hoje", value: "2h 15m", icon: Clock, tint: "text-brand" },
-          { label: "Precisão média", value: "78%", icon: Target, tint: "text-emerald-400", delta: "+4%" },
-          { label: "TRI estimada", value: "742.5", icon: TrendingUp, tint: "text-indigo-400", delta: "+18" },
-        ].map((s) => (
-          <div
+        {stats.map((s) => (
+          <button
             key={s.label}
-            className="p-5 rounded-2xl bg-surface ring-1 ring-hairline"
+            onClick={() => setMetricOpen(s.key)}
+            className="p-5 rounded-2xl bg-surface ring-1 ring-hairline text-left hover:ring-brand/30 hover:-translate-y-0.5 transition-all active:scale-[0.99]"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
@@ -122,7 +110,7 @@ function Dashboard() {
                 {s.delta} esta semana
               </p>
             )}
-          </div>
+          </button>
         ))}
       </section>
 
@@ -146,53 +134,58 @@ function Dashboard() {
               </Link>
             </div>
             <div className="divide-y divide-hairline">
-              {todayPlan.map((item) => (
-                <div
-                  key={item.topic}
-                  className={[
-                    "p-5 flex items-center gap-4 transition-colors",
-                    item.active ? "bg-brand/5" : "hover:bg-white/[0.02]",
-                  ].join(" ")}
-                >
-                  <div
+              {studySessions.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.id}
+                    to="/sessao/$id"
+                    params={{ id: item.id }}
                     className={[
-                      "size-10 rounded-lg grid place-items-center shrink-0",
-                      item.done
-                        ? "bg-brand/10 text-brand"
-                        : "bg-white/5 text-muted-foreground",
+                      "w-full p-5 flex items-center gap-4 transition-colors text-left group",
+                      item.active ? "bg-brand/5 hover:bg-brand/10" : "hover:bg-white/[0.03]",
                     ].join(" ")}
                   >
-                    <item.icon className="size-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                        {item.subject}
-                      </span>
-                      {item.active && (
-                        <span className="text-[10px] font-semibold text-brand uppercase tracking-widest">
-                          · em foco
-                        </span>
-                      )}
+                    <div
+                      className={[
+                        "size-10 rounded-lg grid place-items-center shrink-0 transition",
+                        item.done
+                          ? "bg-brand/10 text-brand"
+                          : "bg-white/5 text-muted-foreground group-hover:text-brand group-hover:bg-brand/10",
+                      ].join(" ")}
+                    >
+                      <Icon className="size-4" />
                     </div>
-                    <p className="text-sm font-medium mt-0.5">{item.topic}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {item.duration} · {item.kind}
-                    </p>
-                  </div>
-                  {item.done ? (
-                    <CheckCircle2 className="size-5 text-brand shrink-0" />
-                  ) : item.active ? (
-                    <button className="px-3 py-1.5 rounded-md bg-brand text-brand-foreground text-xs font-semibold inline-flex items-center gap-1.5">
-                      Continuar <ArrowRight className="size-3" />
-                    </button>
-                  ) : (
-                    <button className="px-3 py-1.5 rounded-md bg-white/5 ring-1 ring-hairline text-xs font-medium hover:bg-white/10 transition">
-                      Iniciar
-                    </button>
-                  )}
-                </div>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                          {item.subject}
+                        </span>
+                        {item.active && (
+                          <span className="text-[10px] font-semibold text-brand uppercase tracking-widest">
+                            · em foco
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium mt-0.5">{item.topic}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {item.duration} · {item.kind}
+                      </p>
+                    </div>
+                    {item.done ? (
+                      <CheckCircle2 className="size-5 text-brand shrink-0" />
+                    ) : item.active ? (
+                      <span className="px-3 py-1.5 rounded-md bg-brand text-brand-foreground text-xs font-semibold inline-flex items-center gap-1.5">
+                        Continuar <ArrowRight className="size-3" />
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1.5 rounded-md bg-white/5 ring-1 ring-hairline text-xs font-medium group-hover:bg-white/10 group-hover:ring-brand/30 transition">
+                        Iniciar
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
@@ -230,7 +223,7 @@ function Dashboard() {
                   </div>
                   <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${s.color}`}
+                      className={`h-full rounded-full ${s.color} transition-all`}
                       style={{ width: `${s.pct}%` }}
                     />
                   </div>
@@ -243,7 +236,11 @@ function Dashboard() {
         {/* Right: AI + progress */}
         <div className="col-span-4 space-y-6">
           {/* AI insight */}
-          <div className="relative rounded-2xl bg-gradient-to-br from-brand/15 via-surface to-surface ring-1 ring-brand/20 p-6 overflow-hidden">
+          <Link
+            to="/insight/$id"
+            params={{ id: "termodinamica-entropia" }}
+            className="block relative rounded-2xl bg-gradient-to-br from-brand/15 via-surface to-surface ring-1 ring-brand/20 p-6 overflow-hidden hover:ring-brand/40 hover:-translate-y-0.5 transition-all"
+          >
             <div className="absolute -top-16 -right-16 size-40 bg-brand/25 blur-3xl pointer-events-none" />
             <div className="flex items-center gap-2 mb-4 relative">
               <div className="size-6 rounded-full bg-brand/20 ring-1 ring-brand/30 grid place-items-center">
@@ -259,20 +256,26 @@ function Dashboard() {
               específicas para você."
             </p>
             <div className="mt-5 flex gap-2 relative">
-              <Link
-                to="/ia"
-                className="flex-1 py-2 px-3 rounded-lg bg-brand text-brand-foreground text-xs font-semibold text-center hover:bg-brand/90 transition"
-              >
+              <span className="flex-1 py-2 px-3 rounded-lg bg-brand text-brand-foreground text-xs font-semibold text-center">
                 Ver recomendação
-              </Link>
-              <button className="py-2 px-3 rounded-lg bg-white/5 ring-1 ring-hairline text-xs font-medium hover:bg-white/10 transition">
+              </span>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                className="py-2 px-3 rounded-lg bg-white/5 ring-1 ring-hairline text-xs font-medium hover:bg-white/10 transition"
+              >
                 Depois
               </button>
             </div>
-          </div>
+          </Link>
 
           {/* Weekly progress */}
-          <div className="rounded-2xl bg-surface ring-1 ring-hairline p-6">
+          <Link
+            to="/estatisticas"
+            className="block rounded-2xl bg-surface ring-1 ring-hairline p-6 hover:ring-brand/30 transition"
+          >
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-sm">Foco semanal</h3>
               <span className="text-xs text-muted-foreground tabular-nums">
@@ -304,10 +307,13 @@ function Dashboard() {
                 </span>
               ))}
             </div>
-          </div>
+          </Link>
 
           {/* Next review */}
-          <div className="rounded-2xl bg-surface ring-1 ring-hairline p-6">
+          <Link
+            to="/cronograma"
+            className="block rounded-2xl bg-surface ring-1 ring-hairline p-6 hover:ring-brand/30 transition"
+          >
             <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
               Próxima revisão espaçada
             </span>
@@ -322,9 +328,16 @@ function Dashboard() {
                 <span className="text-foreground font-medium">92%</span>
               </span>
             </div>
-          </div>
+          </Link>
         </div>
       </section>
+
+      <MetricInfoDialog
+        metric={metricOpen}
+        open={metricOpen !== null}
+        onOpenChange={(o) => !o && setMetricOpen(null)}
+      />
+      <ReorganizeAIDialog open={reorgOpen} onOpenChange={setReorgOpen} />
     </div>
   );
 }
