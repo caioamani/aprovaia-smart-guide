@@ -85,7 +85,7 @@ function Cronograma() {
                           "absolute inset-x-0 top-1 rounded-lg p-2 ring-1 cursor-pointer",
                           block.color,
                         ].join(" ")}
-                        style={{ height: `${block.span * 4}rem - 0.5rem` , bottom: 'auto', minHeight: `${block.span * 4 - 0.5}rem`}}
+                        style={{ height: `${block.span * 4 - 0.5}rem` }}
                       >
                         <p className="text-[9px] font-mono uppercase tracking-widest opacity-80">
                           {block.subject}
