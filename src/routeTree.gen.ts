@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
@@ -21,6 +22,11 @@ import { Route as AppEstatisticasRouteImport } from './routes/_app.estatisticas'
 import { Route as AppCronogramaRouteImport } from './routes/_app.cronograma'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app.configuracoes'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -79,6 +85,7 @@ const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/onboarding': typeof OnboardingRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/cronograma': typeof AppCronogramaRoute
   '/estatisticas': typeof AppEstatisticasRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/cronograma': typeof AppCronogramaRoute
   '/estatisticas': typeof AppEstatisticasRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_app/configuracoes': typeof AppConfiguracoesRoute
   '/_app/cronograma': typeof AppCronogramaRoute
   '/_app/estatisticas': typeof AppEstatisticasRoute
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/onboarding'
+    | '/sitemap.xml'
     | '/configuracoes'
     | '/cronograma'
     | '/estatisticas'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/onboarding'
+    | '/sitemap.xml'
     | '/configuracoes'
     | '/cronograma'
     | '/estatisticas'
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/onboarding'
+    | '/sitemap.xml'
     | '/_app/configuracoes'
     | '/_app/cronograma'
     | '/_app/estatisticas'
@@ -157,10 +169,18 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -270,6 +290,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
