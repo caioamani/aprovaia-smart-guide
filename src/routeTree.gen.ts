@@ -21,6 +21,7 @@ import { Route as AppIaRouteImport } from './routes/_app.ia'
 import { Route as AppEstatisticasRouteImport } from './routes/_app.estatisticas'
 import { Route as AppCronogramaRouteImport } from './routes/_app.cronograma'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app.configuracoes'
+import { Route as AppSessaoIdRouteImport } from './routes/_app.sessao.$id'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -81,6 +82,11 @@ const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSessaoIdRoute = AppSessaoIdRouteImport.update({
+  id: '/sessao/$id',
+  path: '/sessao/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/premium': typeof AppPremiumRoute
   '/questoes': typeof AppQuestoesRoute
   '/redacao': typeof AppRedacaoRoute
+  '/sessao/$id': typeof AppSessaoIdRoute
 }
 export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/questoes': typeof AppQuestoesRoute
   '/redacao': typeof AppRedacaoRoute
   '/': typeof AppIndexRoute
+  '/sessao/$id': typeof AppSessaoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/_app/questoes': typeof AppQuestoesRoute
   '/_app/redacao': typeof AppRedacaoRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/sessao/$id': typeof AppSessaoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/premium'
     | '/questoes'
     | '/redacao'
+    | '/sessao/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/onboarding'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/questoes'
     | '/redacao'
     | '/'
+    | '/sessao/$id'
   id:
     | '__root__'
     | '/_app'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/_app/questoes'
     | '/_app/redacao'
     | '/_app/'
+    | '/_app/sessao/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -258,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/sessao/$id': {
+      id: '/_app/sessao/$id'
+      path: '/sessao/$id'
+      fullPath: '/sessao/$id'
+      preLoaderRoute: typeof AppSessaoIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -271,6 +290,7 @@ interface AppRouteChildren {
   AppQuestoesRoute: typeof AppQuestoesRoute
   AppRedacaoRoute: typeof AppRedacaoRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppSessaoIdRoute: typeof AppSessaoIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -283,6 +303,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppQuestoesRoute: AppQuestoesRoute,
   AppRedacaoRoute: AppRedacaoRoute,
   AppIndexRoute: AppIndexRoute,
+  AppSessaoIdRoute: AppSessaoIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

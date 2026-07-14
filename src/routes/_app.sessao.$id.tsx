@@ -97,7 +97,7 @@ function SessionPage() {
           <p className="text-sm font-semibold">Conteúdo que será estudado</p>
         </div>
         <ul className="space-y-2.5">
-          {session.content.map((c, i) => (
+          {session.content.map((c: string, i: number) => (
             <li key={i} className="flex items-start gap-3 text-sm text-foreground/90">
               <span className="mt-1.5 size-1.5 rounded-full bg-brand shrink-0" />
               {c}
