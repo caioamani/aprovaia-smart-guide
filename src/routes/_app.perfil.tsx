@@ -67,12 +67,10 @@ function Perfil() {
           { label: "Editar perfil", desc: "Nome, e-mail e foto" },
           { label: "Plano Premium", desc: "Ver benefícios ativos", to: "/premium" },
           { label: "Configurações", desc: "Tema, idioma, privacidade", to: "/configuracoes" },
-        ].map((s) => {
-          const Comp = s.to ? Link : "button";
-          return (
-            <Comp
+        ].map((s) =>
+          s.to ? (
+            <Link
               key={s.label}
-              // @ts-expect-error dynamic component
               to={s.to}
               className="w-full text-left p-5 flex items-center justify-between hover:bg-white/[0.02] transition"
             >
@@ -81,9 +79,20 @@ function Perfil() {
                 <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>
               </div>
               <span className="text-muted-foreground">→</span>
-            </Comp>
-          );
-        })}
+            </Link>
+          ) : (
+            <button
+              key={s.label}
+              className="w-full text-left p-5 flex items-center justify-between hover:bg-white/[0.02] transition"
+            >
+              <div>
+                <p className="text-sm font-medium">{s.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>
+              </div>
+              <span className="text-muted-foreground">→</span>
+            </button>
+          ),
+        )}
       </div>
 
       <button className="w-full p-4 rounded-2xl bg-surface ring-1 ring-hairline text-sm text-red-400 font-medium hover:bg-red-500/5 transition inline-flex items-center justify-center gap-2">
