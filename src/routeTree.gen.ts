@@ -14,13 +14,13 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppRedacaoRouteImport } from './routes/_app.redacao'
-import { Route as AppQuestoesRouteImport } from './routes/_app.questoes'
 import { Route as AppPremiumRouteImport } from './routes/_app.premium'
 import { Route as AppPerfilRouteImport } from './routes/_app.perfil'
 import { Route as AppIaRouteImport } from './routes/_app.ia'
 import { Route as AppEstatisticasRouteImport } from './routes/_app.estatisticas'
 import { Route as AppCronogramaRouteImport } from './routes/_app.cronograma'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app.configuracoes'
+import { Route as AppQuestoesIndexRouteImport } from './routes/_app.questoes.index'
 import { Route as AppSessaoIdRouteImport } from './routes/_app.sessao.$id'
 import { Route as AppQuestoesIdRouteImport } from './routes/_app.questoes.$id'
 import { Route as AppInsightIdRouteImport } from './routes/_app.insight.$id'
@@ -47,11 +47,6 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppRedacaoRoute = AppRedacaoRouteImport.update({
   id: '/redacao',
   path: '/redacao',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppQuestoesRoute = AppQuestoesRouteImport.update({
-  id: '/questoes',
-  path: '/questoes',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPremiumRoute = AppPremiumRouteImport.update({
@@ -84,15 +79,20 @@ const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => AppRoute,
 } as any)
+const AppQuestoesIndexRoute = AppQuestoesIndexRouteImport.update({
+  id: '/questoes/',
+  path: '/questoes/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSessaoIdRoute = AppSessaoIdRouteImport.update({
   id: '/sessao/$id',
   path: '/sessao/$id',
   getParentRoute: () => AppRoute,
 } as any)
 const AppQuestoesIdRoute = AppQuestoesIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppQuestoesRoute,
+  id: '/questoes/$id',
+  path: '/questoes/$id',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppInsightIdRoute = AppInsightIdRouteImport.update({
   id: '/insight/$id',
@@ -110,11 +110,11 @@ export interface FileRoutesByFullPath {
   '/ia': typeof AppIaRoute
   '/perfil': typeof AppPerfilRoute
   '/premium': typeof AppPremiumRoute
-  '/questoes': typeof AppQuestoesRouteWithChildren
   '/redacao': typeof AppRedacaoRoute
   '/insight/$id': typeof AppInsightIdRoute
   '/questoes/$id': typeof AppQuestoesIdRoute
   '/sessao/$id': typeof AppSessaoIdRoute
+  '/questoes/': typeof AppQuestoesIndexRoute
 }
 export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
@@ -125,12 +125,12 @@ export interface FileRoutesByTo {
   '/ia': typeof AppIaRoute
   '/perfil': typeof AppPerfilRoute
   '/premium': typeof AppPremiumRoute
-  '/questoes': typeof AppQuestoesRouteWithChildren
   '/redacao': typeof AppRedacaoRoute
   '/': typeof AppIndexRoute
   '/insight/$id': typeof AppInsightIdRoute
   '/questoes/$id': typeof AppQuestoesIdRoute
   '/sessao/$id': typeof AppSessaoIdRoute
+  '/questoes': typeof AppQuestoesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,12 +143,12 @@ export interface FileRoutesById {
   '/_app/ia': typeof AppIaRoute
   '/_app/perfil': typeof AppPerfilRoute
   '/_app/premium': typeof AppPremiumRoute
-  '/_app/questoes': typeof AppQuestoesRouteWithChildren
   '/_app/redacao': typeof AppRedacaoRoute
   '/_app/': typeof AppIndexRoute
   '/_app/insight/$id': typeof AppInsightIdRoute
   '/_app/questoes/$id': typeof AppQuestoesIdRoute
   '/_app/sessao/$id': typeof AppSessaoIdRoute
+  '/_app/questoes/': typeof AppQuestoesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -162,11 +162,11 @@ export interface FileRouteTypes {
     | '/ia'
     | '/perfil'
     | '/premium'
-    | '/questoes'
     | '/redacao'
     | '/insight/$id'
     | '/questoes/$id'
     | '/sessao/$id'
+    | '/questoes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/onboarding'
@@ -177,12 +177,12 @@ export interface FileRouteTypes {
     | '/ia'
     | '/perfil'
     | '/premium'
-    | '/questoes'
     | '/redacao'
     | '/'
     | '/insight/$id'
     | '/questoes/$id'
     | '/sessao/$id'
+    | '/questoes'
   id:
     | '__root__'
     | '/_app'
@@ -194,12 +194,12 @@ export interface FileRouteTypes {
     | '/_app/ia'
     | '/_app/perfil'
     | '/_app/premium'
-    | '/_app/questoes'
     | '/_app/redacao'
     | '/_app/'
     | '/_app/insight/$id'
     | '/_app/questoes/$id'
     | '/_app/sessao/$id'
+    | '/_app/questoes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -245,13 +245,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRedacaoRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/questoes': {
-      id: '/_app/questoes'
-      path: '/questoes'
-      fullPath: '/questoes'
-      preLoaderRoute: typeof AppQuestoesRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/premium': {
       id: '/_app/premium'
       path: '/premium'
@@ -294,6 +287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfiguracoesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/questoes/': {
+      id: '/_app/questoes/'
+      path: '/questoes'
+      fullPath: '/questoes/'
+      preLoaderRoute: typeof AppQuestoesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/sessao/$id': {
       id: '/_app/sessao/$id'
       path: '/sessao/$id'
@@ -303,10 +303,10 @@ declare module '@tanstack/react-router' {
     }
     '/_app/questoes/$id': {
       id: '/_app/questoes/$id'
-      path: '/$id'
+      path: '/questoes/$id'
       fullPath: '/questoes/$id'
       preLoaderRoute: typeof AppQuestoesIdRouteImport
-      parentRoute: typeof AppQuestoesRoute
+      parentRoute: typeof AppRoute
     }
     '/_app/insight/$id': {
       id: '/_app/insight/$id'
@@ -318,18 +318,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AppQuestoesRouteChildren {
-  AppQuestoesIdRoute: typeof AppQuestoesIdRoute
-}
-
-const AppQuestoesRouteChildren: AppQuestoesRouteChildren = {
-  AppQuestoesIdRoute: AppQuestoesIdRoute,
-}
-
-const AppQuestoesRouteWithChildren = AppQuestoesRoute._addFileChildren(
-  AppQuestoesRouteChildren,
-)
-
 interface AppRouteChildren {
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
   AppCronogramaRoute: typeof AppCronogramaRoute
@@ -337,11 +325,12 @@ interface AppRouteChildren {
   AppIaRoute: typeof AppIaRoute
   AppPerfilRoute: typeof AppPerfilRoute
   AppPremiumRoute: typeof AppPremiumRoute
-  AppQuestoesRoute: typeof AppQuestoesRouteWithChildren
   AppRedacaoRoute: typeof AppRedacaoRoute
   AppIndexRoute: typeof AppIndexRoute
   AppInsightIdRoute: typeof AppInsightIdRoute
+  AppQuestoesIdRoute: typeof AppQuestoesIdRoute
   AppSessaoIdRoute: typeof AppSessaoIdRoute
+  AppQuestoesIndexRoute: typeof AppQuestoesIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -351,11 +340,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppIaRoute: AppIaRoute,
   AppPerfilRoute: AppPerfilRoute,
   AppPremiumRoute: AppPremiumRoute,
-  AppQuestoesRoute: AppQuestoesRouteWithChildren,
   AppRedacaoRoute: AppRedacaoRoute,
   AppIndexRoute: AppIndexRoute,
   AppInsightIdRoute: AppInsightIdRoute,
+  AppQuestoesIdRoute: AppQuestoesIdRoute,
   AppSessaoIdRoute: AppSessaoIdRoute,
+  AppQuestoesIndexRoute: AppQuestoesIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

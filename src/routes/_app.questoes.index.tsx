@@ -11,7 +11,7 @@ import {
 import { questionsStore, useQuestions } from "@/lib/questions-store";
 import type { Difficulty, KnowledgeArea, Language } from "@/lib/mock-questions";
 
-export const Route = createFileRoute("/_app/questoes")({
+export const Route = createFileRoute("/_app/questoes/")({
   component: Questoes,
   head: () => ({ meta: [{ title: "Questões · AprovaIA" }] }),
 });
