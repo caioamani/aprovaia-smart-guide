@@ -1,141 +1,108 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Search, Filter, Star, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { QuestionCard } from "@/components/questions/QuestionCard";
+import {
+  QuestionFilters,
+  emptyFilters,
+  type QuestionFiltersState,
+} from "@/components/questions/QuestionFilters";
+import { questionsStore, useQuestions } from "@/lib/questions-store";
+import type { Difficulty, KnowledgeArea, Language } from "@/lib/mock-questions";
 
 export const Route = createFileRoute("/_app/questoes")({
   component: Questoes,
   head: () => ({ meta: [{ title: "Questões · AprovaIA" }] }),
 });
 
-const tabs = ["Todas", "Favoritas", "Erradas", "Para revisão", "Respondidas"];
-
-const questions = [
-  {
-    year: "ENEM 2023",
-    subject: "Matemática",
-    topic: "Funções exponenciais",
-    difficulty: "Média",
-    status: "correct",
-    text: "Uma população de bactérias dobra a cada 3 horas. Se inicialmente há 500 bactérias, quantas haverá após 15 horas?",
-  },
-  {
-    year: "ENEM 2022",
-    subject: "Química",
-    topic: "Estequiometria",
-    difficulty: "Difícil",
-    status: "wrong",
-    text: "Considere a reação de combustão completa do metano. Qual é a massa de CO₂ produzida a partir de 32g de CH₄?",
-  },
-  {
-    year: "ENEM 2024",
-    subject: "História",
-    topic: "Era Vargas",
-    difficulty: "Fácil",
-    status: "review",
-    text: "O Estado Novo, implantado em 1937, caracterizou-se por uma série de medidas centralizadoras. Entre elas destaca-se:",
-  },
-  {
-    year: "ENEM 2023",
-    subject: "Física",
-    topic: "Termodinâmica",
-    difficulty: "Difícil",
-    status: "wrong",
-    text: "Em uma máquina térmica que opera segundo o ciclo de Carnot, a fonte quente está a 500 K e a fonte fria a 300 K. Qual é o rendimento máximo?",
-  },
-];
-
-const statusMap = {
-  correct: { icon: CheckCircle2, label: "Acertou", tint: "text-emerald-400" },
-  wrong: { icon: XCircle, label: "Errou", tint: "text-red-400" },
-  review: { icon: Clock, label: "Para revisão", tint: "text-brand" },
-} as const;
-
 function Questoes() {
+  const questions = useQuestions();
+  const [filters, setFilters] = useState<QuestionFiltersState>(emptyFilters);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 500);
+    return () => clearTimeout(t);
+  }, []);
+
+  const facets = useMemo(() => {
+    const years = Array.from(new Set(questions.map((q) => q.year))).sort((a, b) => b - a);
+    const areas = Array.from(new Set(questions.map((q) => q.area))) as KnowledgeArea[];
+    const subjects = Array.from(new Set(questions.map((q) => q.subject))).sort();
+    const difficulties: Difficulty[] = ["Fácil", "Média", "Difícil"];
+    const languages: Language[] = ["Português", "Inglês", "Espanhol"];
+    return { years, areas, subjects, difficulties, languages };
+  }, [questions]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return questions.filter((it) => {
+      if (filters.years.length && !filters.years.includes(it.year)) return false;
+      if (filters.areas.length && !filters.areas.includes(it.area)) return false;
+      if (filters.subjects.length && !filters.subjects.includes(it.subject)) return false;
+      if (filters.difficulties.length && !filters.difficulties.includes(it.difficulty))
+        return false;
+      if (filters.languages.length && !filters.languages.includes(it.language)) return false;
+      if (filters.onlyAnswered && it.status === "unanswered") return false;
+      if (filters.onlyUnanswered && it.status !== "unanswered") return false;
+      if (filters.onlyWrong && it.status !== "wrong") return false;
+      if (filters.onlyFavorites && !it.favorite) return false;
+      if (q) {
+        const hay = `${it.subject} ${it.topic} ${it.statement} ${it.context}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [questions, filters, query]);
+
   return (
-    <div className="p-8 space-y-6 max-w-[1400px]">
+    <div className="p-8 space-y-6 max-w-[1400px] animate-fade-in">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Banco de questões</h1>
         <p className="text-muted-foreground mt-2 text-sm">
-          Mais de 12.400 questões oficiais do ENEM filtradas por IA para você.
+          {questions.length} questões oficiais do ENEM filtradas por IA. Refine sua prática abaixo.
         </p>
       </div>
 
-      {/* Search + filters */}
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         <div className="flex-1 flex items-center gap-3 px-4 py-3 rounded-xl bg-surface ring-1 ring-hairline">
           <Search className="size-4 text-muted-foreground" />
           <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por matéria, tópico, palavra-chave…"
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
           />
         </div>
-        <button className="px-4 py-3 rounded-xl bg-surface ring-1 ring-hairline text-sm font-medium inline-flex items-center gap-2 hover:bg-white/5 transition">
-          <Filter className="size-4" /> Filtros
-        </button>
+        <div className="text-xs text-muted-foreground tabular-nums">
+          {filtered.length} resultado{filtered.length === 1 ? "" : "s"}
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-hairline">
-        {tabs.map((t, i) => (
-          <button
-            key={t}
-            className={[
-              "px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2",
-              i === 0
-                ? "border-brand text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            ].join(" ")}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <div className="flex flex-col lg:flex-row gap-6">
+        <QuestionFilters filters={filters} setFilters={setFilters} {...facets} />
 
-      {/* Question list */}
-      <div className="space-y-3">
-        {questions.map((q, i) => {
-          const s = statusMap[q.status as keyof typeof statusMap];
-          return (
-            <div
-              key={i}
-              className="p-5 rounded-2xl bg-surface ring-1 ring-hairline hover:ring-brand/30 transition-all cursor-pointer group"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-brand">
-                      {q.year}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">·</span>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                      {q.subject}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">·</span>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                      {q.topic}
-                    </span>
-                    <span className="ml-2 px-2 py-0.5 rounded-full bg-white/5 text-[10px] text-muted-foreground">
-                      {q.difficulty}
-                    </span>
-                  </div>
-                  <p className="text-sm text-foreground/90 leading-relaxed">
-                    {q.text}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-3 shrink-0">
-                  <button className="opacity-40 hover:opacity-100 transition">
-                    <Star className="size-4" />
-                  </button>
-                  <div
-                    className={`flex items-center gap-1.5 text-[11px] font-medium ${s.tint}`}
-                  >
-                    <s.icon className="size-3.5" />
-                    {s.label}
-                  </div>
-                </div>
-              </div>
+        <div className="flex-1 space-y-3 min-w-0">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-2xl bg-surface" />
+            ))
+          ) : filtered.length === 0 ? (
+            <div className="p-10 rounded-2xl bg-surface ring-1 ring-hairline text-center text-sm text-muted-foreground">
+              Nenhuma questão encontrada com esses filtros.
             </div>
-          );
-        })}
+          ) : (
+            filtered.map((q) => (
+              <QuestionCard
+                key={q.id}
+                q={q}
+                onToggleFavorite={(id) => questionsStore.toggleFavorite(id)}
+              />
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

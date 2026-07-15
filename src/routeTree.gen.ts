@@ -22,6 +22,7 @@ import { Route as AppEstatisticasRouteImport } from './routes/_app.estatisticas'
 import { Route as AppCronogramaRouteImport } from './routes/_app.cronograma'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app.configuracoes'
 import { Route as AppSessaoIdRouteImport } from './routes/_app.sessao.$id'
+import { Route as AppQuestoesIdRouteImport } from './routes/_app.questoes.$id'
 import { Route as AppInsightIdRouteImport } from './routes/_app.insight.$id'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -88,6 +89,11 @@ const AppSessaoIdRoute = AppSessaoIdRouteImport.update({
   path: '/sessao/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppQuestoesIdRoute = AppQuestoesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppQuestoesRoute,
+} as any)
 const AppInsightIdRoute = AppInsightIdRouteImport.update({
   id: '/insight/$id',
   path: '/insight/$id',
@@ -104,9 +110,10 @@ export interface FileRoutesByFullPath {
   '/ia': typeof AppIaRoute
   '/perfil': typeof AppPerfilRoute
   '/premium': typeof AppPremiumRoute
-  '/questoes': typeof AppQuestoesRoute
+  '/questoes': typeof AppQuestoesRouteWithChildren
   '/redacao': typeof AppRedacaoRoute
   '/insight/$id': typeof AppInsightIdRoute
+  '/questoes/$id': typeof AppQuestoesIdRoute
   '/sessao/$id': typeof AppSessaoIdRoute
 }
 export interface FileRoutesByTo {
@@ -118,10 +125,11 @@ export interface FileRoutesByTo {
   '/ia': typeof AppIaRoute
   '/perfil': typeof AppPerfilRoute
   '/premium': typeof AppPremiumRoute
-  '/questoes': typeof AppQuestoesRoute
+  '/questoes': typeof AppQuestoesRouteWithChildren
   '/redacao': typeof AppRedacaoRoute
   '/': typeof AppIndexRoute
   '/insight/$id': typeof AppInsightIdRoute
+  '/questoes/$id': typeof AppQuestoesIdRoute
   '/sessao/$id': typeof AppSessaoIdRoute
 }
 export interface FileRoutesById {
@@ -135,10 +143,11 @@ export interface FileRoutesById {
   '/_app/ia': typeof AppIaRoute
   '/_app/perfil': typeof AppPerfilRoute
   '/_app/premium': typeof AppPremiumRoute
-  '/_app/questoes': typeof AppQuestoesRoute
+  '/_app/questoes': typeof AppQuestoesRouteWithChildren
   '/_app/redacao': typeof AppRedacaoRoute
   '/_app/': typeof AppIndexRoute
   '/_app/insight/$id': typeof AppInsightIdRoute
+  '/_app/questoes/$id': typeof AppQuestoesIdRoute
   '/_app/sessao/$id': typeof AppSessaoIdRoute
 }
 export interface FileRouteTypes {
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/questoes'
     | '/redacao'
     | '/insight/$id'
+    | '/questoes/$id'
     | '/sessao/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/redacao'
     | '/'
     | '/insight/$id'
+    | '/questoes/$id'
     | '/sessao/$id'
   id:
     | '__root__'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/_app/redacao'
     | '/_app/'
     | '/_app/insight/$id'
+    | '/_app/questoes/$id'
     | '/_app/sessao/$id'
   fileRoutesById: FileRoutesById
 }
@@ -289,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSessaoIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/questoes/$id': {
+      id: '/_app/questoes/$id'
+      path: '/$id'
+      fullPath: '/questoes/$id'
+      preLoaderRoute: typeof AppQuestoesIdRouteImport
+      parentRoute: typeof AppQuestoesRoute
+    }
     '/_app/insight/$id': {
       id: '/_app/insight/$id'
       path: '/insight/$id'
@@ -299,6 +318,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppQuestoesRouteChildren {
+  AppQuestoesIdRoute: typeof AppQuestoesIdRoute
+}
+
+const AppQuestoesRouteChildren: AppQuestoesRouteChildren = {
+  AppQuestoesIdRoute: AppQuestoesIdRoute,
+}
+
+const AppQuestoesRouteWithChildren = AppQuestoesRoute._addFileChildren(
+  AppQuestoesRouteChildren,
+)
+
 interface AppRouteChildren {
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
   AppCronogramaRoute: typeof AppCronogramaRoute
@@ -306,7 +337,7 @@ interface AppRouteChildren {
   AppIaRoute: typeof AppIaRoute
   AppPerfilRoute: typeof AppPerfilRoute
   AppPremiumRoute: typeof AppPremiumRoute
-  AppQuestoesRoute: typeof AppQuestoesRoute
+  AppQuestoesRoute: typeof AppQuestoesRouteWithChildren
   AppRedacaoRoute: typeof AppRedacaoRoute
   AppIndexRoute: typeof AppIndexRoute
   AppInsightIdRoute: typeof AppInsightIdRoute
@@ -320,7 +351,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIaRoute: AppIaRoute,
   AppPerfilRoute: AppPerfilRoute,
   AppPremiumRoute: AppPremiumRoute,
-  AppQuestoesRoute: AppQuestoesRoute,
+  AppQuestoesRoute: AppQuestoesRouteWithChildren,
   AppRedacaoRoute: AppRedacaoRoute,
   AppIndexRoute: AppIndexRoute,
   AppInsightIdRoute: AppInsightIdRoute,
