@@ -87,14 +87,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "AprovaIA é a plataforma de estudos com Inteligência Artificial que monta, acompanha e ajusta seu plano de aprovação no ENEM em tempo real.",
       },
       { name: "author", content: "AprovaIA" },
-      { property: "og:title", content: "AprovaIA — Professor particular de IA para o ENEM" },
+      { property: "og:title", content: "AprovaIA — Seu professor particular de IA para o ENEM" },
       {
         property: "og:description",
         content:
-          "Plano de estudos personalizado, correção de redação por IA e simulados TRI, sempre adaptados ao seu ritmo.",
+          "AprovaIA é a plataforma de estudos com Inteligência Artificial que monta, acompanha e ajusta seu plano de aprovação no ENEM em tempo real.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "AprovaIA — Seu professor particular de IA para o ENEM" },
+      { name: "twitter:description", content: "AprovaIA é a plataforma de estudos com Inteligência Artificial que monta, acompanha e ajusta seu plano de aprovação no ENEM em tempo real." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8496bd44-fc0c-4e36-b148-7dee72a8ba76/id-preview-5364bdab--76e6a440-871c-41db-8a06-9c0ae7a29cf6.lovable.app-1784142983852.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8496bd44-fc0c-4e36-b148-7dee72a8ba76/id-preview-5364bdab--76e6a440-871c-41db-8a06-9c0ae7a29cf6.lovable.app-1784142983852.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
