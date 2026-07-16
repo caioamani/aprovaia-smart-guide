@@ -1,7 +1,9 @@
-import { useSyncExternalStore } from "react";
-import { mockQuestions, type Question, type QuestionStatus } from "./mock-questions";
+import { useEffect, useSyncExternalStore } from "react";
+import { useSupabaseQuestions } from "./supabase-questions";
+import type { Question, QuestionStatus } from "./mock-questions";
 
-let questions: Question[] = mockQuestions.map((q) => ({ ...q }));
+let questions: Question[] = [];
+let hydrated = false;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -29,9 +31,23 @@ export const questionsStore = {
     questions = questions.map((q) => (q.id === id ? { ...q, status } : q));
     emit();
   },
+  // Chamado quando os dados reais chegam do Supabase pela primeira vez.
+  hydrate(data: Question[]) {
+    questions = data;
+    hydrated = true;
+    emit();
+  },
 };
 
 export function useQuestions(): Question[] {
+  const { data } = useSupabaseQuestions();
+
+  useEffect(() => {
+    if (data && !hydrated) {
+      questionsStore.hydrate(data);
+    }
+  }, [data]);
+
   return useSyncExternalStore(
     questionsStore.subscribe,
     questionsStore.get,
