@@ -2,12 +2,6 @@ import { Star, CheckCircle2, XCircle, Circle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import type { Question } from "@/lib/mock-questions";
 
-const difficultyColor: Record<string, string> = {
-  Fácil: "text-emerald-400",
-  Média: "text-amber-400",
-  Difícil: "text-red-400",
-};
-
 export function QuestionCard({
   q,
   onToggleFavorite,
@@ -46,12 +40,7 @@ export function QuestionCard({
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
               {q.subject}
             </span>
-            <span
-              className={`ml-2 px-2 py-0.5 rounded-full bg-white/5 text-[10px] ${difficultyColor[q.difficulty]}`}
-            >
-              {q.difficulty}
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-white/5 text-[10px] text-muted-foreground">
+            <span className="ml-2 px-2 py-0.5 rounded-full bg-white/5 text-[10px] text-muted-foreground">
               {q.language}
             </span>
           </div>
