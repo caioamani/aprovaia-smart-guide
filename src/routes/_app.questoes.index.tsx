@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { QuestionCard } from "@/components/questions/QuestionCard";
 import {
   QuestionFilters,
@@ -10,6 +11,8 @@ import {
 } from "@/components/questions/QuestionFilters";
 import { questionsStore, useQuestions } from "@/lib/questions-store";
 import type { Difficulty, KnowledgeArea, Language } from "@/lib/mock-questions";
+
+const PAGE_SIZE = 20;
 
 export const Route = createFileRoute("/_app/questoes/")({
   component: Questoes,
@@ -21,6 +24,7 @@ function Questoes() {
   const [filters, setFilters] = useState<QuestionFiltersState>(emptyFilters);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 500);
@@ -56,6 +60,23 @@ function Questoes() {
       return true;
     });
   }, [questions, filters, query]);
+
+  // Sempre que os filtros ou a busca mudarem, volta pra primeira página —
+  // senão o usuário pode ficar "preso" numa página que não existe mais
+  // no novo resultado filtrado.
+  useEffect(() => {
+    setPage(1);
+  }, [filters, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
+
+  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, filtered.length);
 
   return (
     <div className="p-8 space-y-6 max-w-[1400px] animate-fade-in">
@@ -94,13 +115,49 @@ function Questoes() {
               Nenhuma questão encontrada com esses filtros.
             </div>
           ) : (
-            filtered.map((q) => (
-              <QuestionCard
-                key={q.id}
-                q={q}
-                onToggleFavorite={(id) => questionsStore.toggleFavorite(id)}
-              />
-            ))
+            <>
+              {paged.map((q) => (
+                <QuestionCard
+                  key={q.id}
+                  q={q}
+                  onToggleFavorite={(id) => questionsStore.toggleFavorite(id)}
+                />
+              ))}
+
+              <div className="flex items-center justify-between pt-4">
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  Mostrando {rangeStart}–{rangeEnd} de {filtered.length}
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1"
+                    disabled={currentPage <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="size-4" />
+                    Anterior
+                  </Button>
+
+                  <span className="text-xs text-muted-foreground tabular-nums px-2">
+                    Página {currentPage} de {totalPages}
+                  </span>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Próxima
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
