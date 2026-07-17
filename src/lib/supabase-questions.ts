@@ -44,9 +44,6 @@ function mapRowToQuestion(row: SupabaseQuestionRow): Question {
     area: disciplineToArea[row.discipline ?? ""] ?? "Linguagens e Códigos",
     subject: row.discipline ?? "Geral",
     topic: row.title ?? "",
-    // A API do ENEM não classifica dificuldade — fica fixo até termos essa
-    // informação (ex: calculada depois, com base no % de acerto dos usuários).
-    difficulty: "Média",
     language: languageMap[row.language ?? ""] ?? "Português",
     context: row.context ?? "",
     statement: row.alternatives_introduction ?? row.title ?? "",
