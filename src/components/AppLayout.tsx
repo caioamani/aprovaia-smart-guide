@@ -1,4 +1,4 @@
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   BookOpenCheck,
@@ -12,8 +12,10 @@ import {
   Flame,
   Bell,
   Search,
+  LogOut,
 } from "lucide-react";
 import type { ComponentType } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 type NavItem = {
   to: string;
@@ -74,6 +76,14 @@ function SidebarLink({ item }: { item: NavItem }) {
 }
 
 export function AppLayout() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleSignOut() {
+    await signOut();
+    navigate({ to: "/login" });
+  }
+
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar */}
@@ -152,8 +162,15 @@ export function AppLayout() {
               <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-brand" />
             </button>
             <div className="size-8 rounded-full bg-gradient-to-br from-brand/60 to-indigo-500/60 ring-1 ring-white/10 grid place-items-center text-xs font-semibold">
-              L
+              {(user?.email?.[0] ?? "?").toUpperCase()}
             </div>
+            <button
+              onClick={handleSignOut}
+              title="Sair"
+              className="size-8 rounded-md ring-1 ring-hairline hover:bg-white/5 grid place-items-center transition text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="size-3.5" />
+            </button>
           </div>
         </header>
 
