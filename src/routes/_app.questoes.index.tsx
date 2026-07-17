@@ -10,7 +10,7 @@ import {
   type QuestionFiltersState,
 } from "@/components/questions/QuestionFilters";
 import { questionsStore, useQuestions } from "@/lib/questions-store";
-import type { Difficulty, KnowledgeArea, Language } from "@/lib/mock-questions";
+import type { KnowledgeArea, Language } from "@/lib/mock-questions";
 
 const PAGE_SIZE = 20;
 
@@ -34,10 +34,8 @@ function Questoes() {
   const facets = useMemo(() => {
     const years = Array.from(new Set(questions.map((q) => q.year))).sort((a, b) => b - a);
     const areas = Array.from(new Set(questions.map((q) => q.area))) as KnowledgeArea[];
-    const subjects = Array.from(new Set(questions.map((q) => q.subject))).sort();
-    const difficulties: Difficulty[] = ["Fácil", "Média", "Difícil"];
     const languages: Language[] = ["Português", "Inglês", "Espanhol"];
-    return { years, areas, subjects, difficulties, languages };
+    return { years, areas, languages };
   }, [questions]);
 
   const filtered = useMemo(() => {
@@ -46,8 +44,6 @@ function Questoes() {
       if (filters.years.length && !filters.years.includes(it.year)) return false;
       if (filters.areas.length && !filters.areas.includes(it.area)) return false;
       if (filters.subjects.length && !filters.subjects.includes(it.subject)) return false;
-      if (filters.difficulties.length && !filters.difficulties.includes(it.difficulty))
-        return false;
       if (filters.languages.length && !filters.languages.includes(it.language)) return false;
       if (filters.onlyAnswered && it.status === "unanswered") return false;
       if (filters.onlyUnanswered && it.status !== "unanswered") return false;
