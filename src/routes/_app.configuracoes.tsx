@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useTheme, type ThemePreference } from "@/hooks/use-theme";
 
 type Item =
   | { label: string; control: "switch"; value: boolean }
@@ -10,11 +11,21 @@ export const Route = createFileRoute("/_app/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações · AprovaIA" }] }),
 });
 
+const THEME_LABEL_TO_PREF: Record<string, ThemePreference> = {
+  Escuro: "dark",
+  Claro: "light",
+  Sistema: "system",
+};
+const THEME_PREF_TO_LABEL: Record<ThemePreference, string> = {
+  dark: "Escuro",
+  light: "Claro",
+  system: "Sistema",
+};
+
 const sections: Section[] = [
   {
     title: "Aparência",
     items: [
-      { label: "Tema", control: "select", options: ["Escuro", "Claro", "Sistema"], value: "Escuro" },
       { label: "Estilo visual", control: "select", options: ["Compacto", "Confortável"], value: "Confortável" },
     ],
   },
@@ -42,6 +53,8 @@ const sections: Section[] = [
 ];
 
 function Configuracoes() {
+  const { theme, setTheme } = useTheme();
+
   return (
     <div className="p-8 space-y-8 max-w-[900px]">
       <div>
@@ -51,7 +64,61 @@ function Configuracoes() {
         </p>
       </div>
 
-      {sections.map((sec) => (
+      <div>
+        <h2 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-3 px-1">
+          Aparência
+        </h2>
+        <div className="rounded-2xl bg-surface ring-1 ring-hairline divide-y divide-hairline">
+          <div className="p-5 flex items-center justify-between gap-4">
+            <span className="text-sm">Tema</span>
+            <select
+              value={THEME_PREF_TO_LABEL[theme]}
+              onChange={(e) => setTheme(THEME_LABEL_TO_PREF[e.target.value])}
+              className="bg-white/5 ring-1 ring-hairline rounded-md px-3 py-1.5 text-sm outline-none focus:ring-brand/40"
+            >
+              {["Escuro", "Claro", "Sistema"].map((o) => (
+                <option key={o} className="bg-background">
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {sections[0].items.map((it) => (
+            <div key={it.label} className="p-5 flex items-center justify-between gap-4">
+              <span className="text-sm">{it.label}</span>
+              {it.control === "switch" ? (
+                <button
+                  className={[
+                    "w-10 h-6 rounded-full p-0.5 transition",
+                    it.value ? "bg-brand" : "bg-white/10",
+                  ].join(" ")}
+                >
+                  <div
+                    className={[
+                      "size-5 rounded-full bg-white transition-transform",
+                      it.value ? "translate-x-4" : "",
+                    ].join(" ")}
+                  />
+                </button>
+              ) : (
+                <select
+                  defaultValue={it.value as string}
+                  className="bg-white/5 ring-1 ring-hairline rounded-md px-3 py-1.5 text-sm outline-none focus:ring-brand/40"
+                >
+                  {(it.options as string[]).map((o) => (
+                    <option key={o} className="bg-background">
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {sections.slice(1).map((sec) => (
         <div key={sec.title}>
           <h2 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-3 px-1">
             {sec.title}
