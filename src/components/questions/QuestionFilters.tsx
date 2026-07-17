@@ -1,4 +1,4 @@
-import type { Difficulty, KnowledgeArea, Language } from "@/lib/mock-questions";
+import type { KnowledgeArea, Language } from "@/lib/mock-questions";
 import { RotateCcw } from "lucide-react";
 
 export type QuestionFiltersState = {
@@ -6,7 +6,6 @@ export type QuestionFiltersState = {
   areas: KnowledgeArea[];
   subjects: string[];
   topics: string[];
-  difficulties: Difficulty[];
   languages: Language[];
   onlyAnswered: boolean;
   onlyUnanswered: boolean;
@@ -19,7 +18,6 @@ export const emptyFilters: QuestionFiltersState = {
   areas: [],
   subjects: [],
   topics: [],
-  difficulties: [],
   languages: [],
   onlyAnswered: false,
   onlyUnanswered: false,
@@ -92,16 +90,12 @@ export function QuestionFilters({
   setFilters,
   years,
   areas,
-  subjects,
-  difficulties,
   languages,
 }: {
   filters: QuestionFiltersState;
   setFilters: (f: QuestionFiltersState) => void;
   years: number[];
   areas: KnowledgeArea[];
-  subjects: string[];
-  difficulties: Difficulty[];
   languages: Language[];
 }) {
   const toggle = <K extends keyof QuestionFiltersState>(
@@ -147,28 +141,6 @@ export function QuestionFilters({
             label={a.replace(" e suas Tecnologias", "")}
             active={filters.areas.includes(a)}
             onToggle={() => toggle("areas", a)}
-          />
-        ))}
-      </Section>
-
-      <Section title="Disciplina">
-        {subjects.map((s) => (
-          <CheckPill
-            key={s}
-            label={s}
-            active={filters.subjects.includes(s)}
-            onToggle={() => toggle("subjects", s)}
-          />
-        ))}
-      </Section>
-
-      <Section title="Dificuldade">
-        {difficulties.map((d) => (
-          <CheckPill
-            key={d}
-            label={d}
-            active={filters.difficulties.includes(d)}
-            onToggle={() => toggle("difficulties", d)}
           />
         ))}
       </Section>
