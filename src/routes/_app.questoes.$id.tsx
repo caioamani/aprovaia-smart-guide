@@ -125,9 +125,6 @@ function QuestionDetail() {
               <span className="ml-2 px-2 py-0.5 rounded-full bg-white/5 text-[10px] text-muted-foreground">
                 {q.subject}
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-white/5 text-[10px] text-muted-foreground">
-                {q.difficulty}
-              </span>
               <button
                 onClick={() => questionsStore.toggleFavorite(q.id)}
                 className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition"
