@@ -64,17 +64,34 @@ function mapRowToQuestion(row: SupabaseQuestionRow): Question {
   };
 }
 
-async function fetchQuestions(): Promise<Question[]> {
-  const { data, error } = await supabase
-    .from("questions")
-    .select(
-      "id, exam_year, index, title, discipline, language, context, alternatives_introduction, alternatives, correct_alternative",
-    )
-    .order("exam_year", { ascending: false })
-    .order("index", { ascending: true });
+const PAGE_SIZE = 1000; // limite padrão de linhas por requisição do Supabase
 
-  if (error) throw error;
-  return (data as SupabaseQuestionRow[]).map(mapRowToQuestion);
+async function fetchQuestions(): Promise<Question[]> {
+  const allRows: SupabaseQuestionRow[] = [];
+  let from = 0;
+
+  // O Supabase/PostgREST devolve no máximo 1000 linhas por chamada, então
+  // buscamos em páginas até não sobrar mais nada.
+  while (true) {
+    const { data, error } = await supabase
+      .from("questions")
+      .select(
+        "id, exam_year, index, title, discipline, language, context, alternatives_introduction, alternatives, correct_alternative",
+      )
+      .order("exam_year", { ascending: false })
+      .order("index", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+
+    allRows.push(...(data as SupabaseQuestionRow[]));
+
+    if (data.length < PAGE_SIZE) break; // última página
+    from += PAGE_SIZE;
+  }
+
+  return allRows.map(mapRowToQuestion);
 }
 
 export function useSupabaseQuestions() {
