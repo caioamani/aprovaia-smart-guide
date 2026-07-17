@@ -12,6 +12,22 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/hooks/use-theme";
+
+// Roda antes do React hidratar, pra já pintar a página com o tema certo
+// (evita o "flash" de tema errado por uma fração de segundo ao carregar).
+const THEME_INIT_SCRIPT = `
+(function () {
+  try {
+    var stored = localStorage.getItem("aprovaia-theme");
+    var pref = stored === "light" || stored === "dark" ? stored : "system";
+    var resolved = pref === "system"
+      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : pref;
+    if (resolved === "dark") document.documentElement.classList.add("dark");
+  } catch (e) {}
+})();
+`;
 
 function NotFoundComponent() {
   return (
@@ -121,6 +137,7 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
@@ -136,8 +153,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster />
+      <ThemeProvider>
+        <Outlet />
+        <Toaster />
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
