@@ -167,3 +167,42 @@ export function useAnswerQuestion() {
     },
   });
 }
+
+// ---------------------------------------------------------------------
+// Explicação da IA (tabela ai_explanations + Edge Function explain-question)
+// ---------------------------------------------------------------------
+
+async function fetchExplanation(questionId: string): Promise<string> {
+  // 1. Já existe uma explicação salva? Usa ela, sem gastar chamada de IA.
+  const { data: cached } = await supabase
+    .from("ai_explanations")
+    .select("explanation")
+    .eq("question_id", questionId)
+    .maybeSingle();
+
+  if (cached?.explanation) return cached.explanation;
+
+  // 2. Não existe ainda — pede pra Edge Function gerar (ela mesma salva
+  //    o resultado, então da próxima vez cai direto no cache acima).
+  const { data, error } = await supabase.functions.invoke<{
+    explanation?: string;
+    error?: string;
+  }>("explain-question", {
+    body: { questionId },
+  });
+
+  if (error) throw error;
+  if (!data?.explanation) throw new Error(data?.error ?? "Não foi possível gerar a explicação.");
+
+  return data.explanation;
+}
+
+export function useQuestionExplanation(questionId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["explanation", questionId],
+    queryFn: () => fetchExplanation(questionId),
+    enabled,
+    staleTime: Infinity, // a explicação de uma questão não muda
+    retry: 1,
+  });
+}
