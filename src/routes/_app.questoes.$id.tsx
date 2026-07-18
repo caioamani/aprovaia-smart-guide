@@ -39,7 +39,7 @@ function QuestionDetail() {
 
   // Só busca/gera a explicação depois que a pessoa responde — antes disso
   // não tem necessidade (e evita gastar chamada de IA à toa).
-  const { data: explanation, isLoading: explanationLoading } = useQuestionExplanation(
+  const { data: explanation, isLoading: explanationLoading, error: explanationError } = useQuestionExplanation(
     q?.id ?? "",
     answered && !!q,
   );
@@ -206,7 +206,8 @@ function QuestionDetail() {
                 <p className="text-sm text-foreground/90 leading-relaxed">{explanation}</p>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Não foi possível gerar a explicação agora. Tente novamente mais tarde.
+                  Não foi possível gerar a explicação agora
+                  {explanationError ? `: ${explanationError.message}` : "."}
                 </p>
               )}
             </div>
