@@ -9,6 +9,7 @@ import { ProgressBar } from "@/components/questions/ProgressBar";
 import { SessionStats, type SessionStatsData } from "@/components/questions/SessionStats";
 import { ReportProblemDialog } from "@/components/questions/ReportProblemDialog";
 import { questionsStore, useQuestions } from "@/lib/questions-store";
+import { useAnswerQuestion } from "@/lib/supabase-questions";
 
 export const Route = createFileRoute("/_app/questoes/$id")({
   component: QuestionDetail,
@@ -19,6 +20,7 @@ function QuestionDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const questions = useQuestions();
+  const answerQuestion = useAnswerQuestion();
 
   const index = useMemo(() => questions.findIndex((q) => q.id === id), [questions, id]);
   const q = index >= 0 ? questions[index] : undefined;
@@ -71,6 +73,8 @@ function QuestionDetail() {
     if (!selected || answered) return;
     setAnswered(true);
     const correct = selected === q.correct;
+    // Atualização otimista: feedback instantâneo na tela enquanto a
+    // gravação no banco acontece em segundo plano.
     questionsStore.setStatus(q.id, correct ? "correct" : "wrong");
     setStats((s) => ({
       ...s,
@@ -80,6 +84,15 @@ function QuestionDetail() {
     }));
     toast[correct ? "success" : "error"](
       correct ? "Boa! Você acertou." : `Errou. Resposta correta: ${q.correct}.`,
+    );
+
+    answerQuestion.mutate(
+      { questionId: q.id, selectedLetter: selected, isCorrect: correct },
+      {
+        onError: () => {
+          toast.error("Não foi possível salvar sua resposta. Verifique sua conexão.");
+        },
+      },
     );
   };
 
