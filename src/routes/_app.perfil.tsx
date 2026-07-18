@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Crown, Edit3, Target, Clock, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_app/perfil")({
   component: Perfil,
@@ -7,13 +8,21 @@ export const Route = createFileRoute("/_app/perfil")({
 });
 
 function Perfil() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleSignOut() {
+    await signOut();
+    navigate({ to: "/login" });
+  }
+
   return (
     <div className="p-8 space-y-6 max-w-[1000px]">
       <div className="rounded-2xl bg-gradient-to-br from-brand/15 via-surface to-surface ring-1 ring-brand/20 p-8">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-5">
             <div className="size-20 rounded-full bg-gradient-to-br from-brand to-indigo-500 grid place-items-center text-2xl font-semibold text-brand-foreground">
-              L
+              {(user?.email?.[0] ?? "?").toUpperCase()}
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -95,7 +104,10 @@ function Perfil() {
         )}
       </div>
 
-      <button className="w-full p-4 rounded-2xl bg-surface ring-1 ring-hairline text-sm text-red-400 font-medium hover:bg-red-500/5 transition inline-flex items-center justify-center gap-2">
+      <button
+        onClick={handleSignOut}
+        className="w-full p-4 rounded-2xl bg-surface ring-1 ring-hairline text-sm text-red-400 font-medium hover:bg-red-500/5 transition inline-flex items-center justify-center gap-2"
+      >
         <LogOut className="size-4" />
         Sair da conta
       </button>
