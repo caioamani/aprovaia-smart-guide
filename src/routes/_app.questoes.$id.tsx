@@ -9,7 +9,7 @@ import { ProgressBar } from "@/components/questions/ProgressBar";
 import { SessionStats, type SessionStatsData } from "@/components/questions/SessionStats";
 import { ReportProblemDialog } from "@/components/questions/ReportProblemDialog";
 import { questionsStore, useQuestions } from "@/lib/questions-store";
-import { useAnswerQuestion } from "@/lib/supabase-questions";
+import { useAnswerQuestion, useQuestionExplanation } from "@/lib/supabase-questions";
 
 export const Route = createFileRoute("/_app/questoes/$id")({
   component: QuestionDetail,
@@ -36,6 +36,13 @@ function QuestionDetail() {
     wrong: 0,
     elapsedSeconds: 0,
   });
+
+  // Só busca/gera a explicação depois que a pessoa responde — antes disso
+  // não tem necessidade (e evita gastar chamada de IA à toa).
+  const { data: explanation, isLoading: explanationLoading } = useQuestionExplanation(
+    q?.id ?? "",
+    answered && !!q,
+  );
 
   // simulated loading on question change
   useEffect(() => {
@@ -189,9 +196,19 @@ function QuestionDetail() {
                 <Sparkles className="size-3.5" />
                 Explicação da IA
               </div>
-              <p className="text-sm text-foreground/90 leading-relaxed">
-                {q.explanation}
-              </p>
+              {explanationLoading ? (
+                <div className="space-y-2 pt-1">
+                  <Skeleton className="h-3.5 w-full bg-brand/10" />
+                  <Skeleton className="h-3.5 w-11/12 bg-brand/10" />
+                  <Skeleton className="h-3.5 w-2/3 bg-brand/10" />
+                </div>
+              ) : explanation ? (
+                <p className="text-sm text-foreground/90 leading-relaxed">{explanation}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Não foi possível gerar a explicação agora. Tente novamente mais tarde.
+                </p>
+              )}
             </div>
           )}
 
