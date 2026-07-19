@@ -32,10 +32,43 @@ type SupabaseQuestionRow = {
   discipline: string | null;
   language: string | null;
   context: string | null;
+  files: string[] | null;
   alternatives_introduction: string | null;
   alternatives: SupabaseAlternative[];
   correct_alternative: string | null;
 };
+
+// Um bom número de imagens da API do ENEM aponta pra esse placeholder
+// genérico quando a imagem real não foi capturada — nesse caso específico
+// não tem o que mostrar, então tratamos como "sem imagem".
+function isBrokenImage(url: string | null | undefined): boolean {
+  return !url || url.includes("broken-image.svg");
+}
+
+function realImagesOnly(urls: (string | null | undefined)[]): string[] {
+  return urls.filter((u): u is string => !isBrokenImage(u));
+}
+
+// Os textos que vêm da API do ENEM às vezes trazem marcação em Markdown
+// (imagens em formato markdown, **negrito**, colchetes escapados de provas
+// antigas) que o site não interpreta como texto — aqui a gente limpa isso,
+// já que as imagens de verdade são tratadas à parte (ver contextImages e
+// alternative.image) e renderizadas como <img>, não como texto.
+function cleanQuestionText(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    // Negrito/itálico em markdown -> mantém só o texto, sem os asteriscos.
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    // Colchetes escapados que sobram em algumas provas mais antigas.
+    .replace(/\\\[/g, "[")
+    .replace(/\\\]/g, "]")
+    // Várias linhas em branco seguidas (que sobram depois de remover as
+    // imagens) viram só uma.
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 function mapRowToQuestion(row: SupabaseQuestionRow): Question {
   return {
@@ -44,13 +77,15 @@ function mapRowToQuestion(row: SupabaseQuestionRow): Question {
     year: row.exam_year,
     area: disciplineToArea[row.discipline ?? ""] ?? "Linguagens e Códigos",
     subject: row.discipline ?? "Geral",
-    topic: row.title ?? "",
+    topic: cleanQuestionText(row.title),
     language: languageMap[row.language ?? ""] ?? "Português",
-    context: row.context ?? "",
-    statement: row.alternatives_introduction ?? row.title ?? "",
+    context: cleanQuestionText(row.context),
+    contextImages: realImagesOnly(row.files ?? []),
+    statement: cleanQuestionText(row.alternatives_introduction ?? row.title),
     alternatives: (row.alternatives ?? []).map((a) => ({
       letter: a.letter,
-      text: a.text,
+      text: cleanQuestionText(a.text),
+      image: realImagesOnly([a.file])[0],
     })),
     correct: (row.correct_alternative as Question["correct"]) ?? "A",
     // Vem da tabela ai_explanations — ainda não conectada nesta etapa.
@@ -76,7 +111,7 @@ async function fetchQuestions(): Promise<Question[]> {
     const { data, error } = await supabase
       .from("questions")
       .select(
-        "id, exam_year, index, title, discipline, language, context, alternatives_introduction, alternatives, correct_alternative",
+        "id, exam_year, index, title, discipline, language, context, files, alternatives_introduction, alternatives, correct_alternative",
       )
       .order("exam_year", { ascending: false })
       .order("index", { ascending: true })
@@ -91,6 +126,9 @@ async function fetchQuestions(): Promise<Question[]> {
     from += PAGE_SIZE;
   }
 
+  // Antes a gente excluía questões com imagem inteiras da lista; agora só
+  // filtramos os links de imagem quebrados (ver isBrokenImage), então
+  // todas as questões entram, com ou sem imagem de verdade.
   return allRows.map(mapRowToQuestion);
 }
 
