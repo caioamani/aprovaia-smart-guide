@@ -170,6 +170,19 @@ function QuestionDetail() {
             <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-line">
               {q.context}
             </p>
+            {q.contextImages.length > 0 && (
+              <div className="space-y-3 pt-1">
+                {q.contextImages.map((src) => (
+                  <img
+                    key={src}
+                    src={src}
+                    alt="Imagem de apoio da questão"
+                    loading="lazy"
+                    className="max-w-full rounded-lg ring-1 ring-hairline"
+                  />
+                ))}
+              </div>
+            )}
           </div>
           <p className="text-base text-foreground leading-relaxed font-medium">
             {q.statement}
