@@ -10,6 +10,7 @@ export type QuestionStatus = "unanswered" | "correct" | "wrong";
 export type Alternative = {
   letter: "A" | "B" | "C" | "D" | "E";
   text: string;
+  image?: string;
 };
 
 export type Question = {
@@ -21,6 +22,7 @@ export type Question = {
   topic: string;
   language: Language;
   context: string;
+  contextImages: string[];
   statement: string;
   alternatives: Alternative[];
   correct: "A" | "B" | "C" | "D" | "E";
@@ -67,6 +69,7 @@ function make(
     topic,
     language,
     context,
+    contextImages: [],
     statement,
     alternatives: alts.map((text, i) => ({ letter: letters[i], text })),
     correct: letters[correctIdx],
