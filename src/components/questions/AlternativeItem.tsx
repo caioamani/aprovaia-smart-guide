@@ -44,7 +44,19 @@ export function AlternativeItem({
       >
         {isRightAnswer ? <Check className="size-4" /> : isWrongSelected ? <X className="size-4" /> : alt.letter}
       </span>
-      <span className="text-sm text-foreground/90 leading-relaxed pt-0.5">{alt.text}</span>
+      <span className="flex-1 text-left space-y-2">
+        <span className="block text-sm text-foreground/90 leading-relaxed pt-0.5">
+          {alt.text}
+        </span>
+        {alt.image && (
+          <img
+            src={alt.image}
+            alt={`Imagem da alternativa ${alt.letter}`}
+            loading="lazy"
+            className="max-w-full rounded-lg ring-1 ring-hairline"
+          />
+        )}
+      </span>
     </button>
   );
 }
