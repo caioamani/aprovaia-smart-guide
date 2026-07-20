@@ -130,7 +130,7 @@ async function fetchQuestions(): Promise<Question[]> {
   // Antes a gente excluía questões com imagem inteiras da lista; agora só
   // filtramos os links de imagem quebrados (ver isBrokenImage), então
   // todas as questões entram, com ou sem imagem de verdade.
-  return allRows.map(mapRowToQuestion);
+  return allRows.map(mapRowToQuestion).map(applyQuestionOverrides);
 }
 
 export function useSupabaseQuestions() {
