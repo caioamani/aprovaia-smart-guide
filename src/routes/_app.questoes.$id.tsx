@@ -10,20 +10,54 @@ import { SessionStats, type SessionStatsData } from "@/components/questions/Sess
 import { ReportProblemDialog } from "@/components/questions/ReportProblemDialog";
 import { questionsStore, useQuestions } from "@/lib/questions-store";
 import { useAnswerQuestion, useQuestionExplanation } from "@/lib/supabase-questions";
+import { filterQuestions } from "@/lib/question-filters";
+import type { QuestionFiltersState } from "@/components/questions/QuestionFilters";
+import type { KnowledgeArea, Language } from "@/lib/mock-questions";
+
+// O mesmo filtro (+ texto de busca) aplicado na listagem (/questoes) chega
+// aqui pela URL, assim "Anterior"/"Próxima" navegam dentro do resultado
+// filtrado — não pela lista inteira e sem filtro nenhum.
+type QuestionDetailSearch = QuestionFiltersState & { q: string };
 
 export const Route = createFileRoute("/_app/questoes/$id")({
+  validateSearch: (search: Record<string, unknown>): QuestionDetailSearch => ({
+    years: Array.isArray(search.years) ? (search.years as number[]) : [],
+    areas: Array.isArray(search.areas) ? (search.areas as KnowledgeArea[]) : [],
+    subjects: Array.isArray(search.subjects) ? (search.subjects as string[]) : [],
+    topics: Array.isArray(search.topics) ? (search.topics as string[]) : [],
+    languages: Array.isArray(search.languages) ? (search.languages as Language[]) : [],
+    onlyAnswered: Boolean(search.onlyAnswered),
+    onlyUnanswered: Boolean(search.onlyUnanswered),
+    onlyWrong: Boolean(search.onlyWrong),
+    onlyFavorites: Boolean(search.onlyFavorites),
+    q: typeof search.q === "string" ? search.q : "",
+  }),
   component: QuestionDetail,
   head: () => ({ meta: [{ title: "Resolver questão · AprovaIA" }] }),
 });
 
 function QuestionDetail() {
   const { id } = Route.useParams();
+  const search = Route.useSearch();
   const navigate = useNavigate();
-  const questions = useQuestions();
+  const allQuestions = useQuestions();
   const answerQuestion = useAnswerQuestion();
 
+  // Mesmo filtro da listagem, aplicado aqui — assim a navegação
+  // Anterior/Próxima acontece dentro do mesmo recorte que o usuário via.
+  // Se não vier nenhum filtro na URL (ex: link direto), isso simplesmente
+  // devolve a lista inteira, igual ao comportamento antigo.
+  const questions = useMemo(
+    () => filterQuestions(allQuestions, search, search.q),
+    [allQuestions, search],
+  );
+
   const index = useMemo(() => questions.findIndex((q) => q.id === id), [questions, id]);
-  const q = index >= 0 ? questions[index] : undefined;
+  // Se a questão atual não está no recorte filtrado (ex: alguém abriu um
+  // link direto de uma questão que não bate mais com o filtro salvo),
+  // procura ela na lista inteira só pra poder exibir o conteúdo — mas a
+  // navegação Anterior/Próxima continua baseada no recorte filtrado.
+  const q = index >= 0 ? questions[index] : allQuestions.find((it) => it.id === id);
 
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
@@ -105,7 +139,7 @@ function QuestionDetail() {
 
   const goTo = (targetId?: string) => {
     if (!targetId) return;
-    navigate({ to: "/questoes/$id", params: { id: targetId } });
+    navigate({ to: "/questoes/$id", params: { id: targetId }, search });
   };
 
   return (
@@ -118,7 +152,7 @@ function QuestionDetail() {
         Voltar ao banco
       </button>
 
-      <ProgressBar current={index + 1} total={questions.length} />
+      <ProgressBar current={Math.max(index, 0) + 1} total={questions.length} />
 
       <SessionStats stats={stats} />
 
