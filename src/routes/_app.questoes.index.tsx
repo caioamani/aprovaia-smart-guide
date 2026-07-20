@@ -10,6 +10,7 @@ import {
   type QuestionFiltersState,
 } from "@/components/questions/QuestionFilters";
 import { questionsStore, useQuestions } from "@/lib/questions-store";
+import { filterQuestions } from "@/lib/question-filters";
 import type { KnowledgeArea, Language } from "@/lib/mock-questions";
 
 const PAGE_SIZE = 20;
@@ -38,24 +39,10 @@ function Questoes() {
     return { years, areas, languages };
   }, [questions]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return questions.filter((it) => {
-      if (filters.years.length && !filters.years.includes(it.year)) return false;
-      if (filters.areas.length && !filters.areas.includes(it.area)) return false;
-      if (filters.subjects.length && !filters.subjects.includes(it.subject)) return false;
-      if (filters.languages.length && !filters.languages.includes(it.language)) return false;
-      if (filters.onlyAnswered && it.status === "unanswered") return false;
-      if (filters.onlyUnanswered && it.status !== "unanswered") return false;
-      if (filters.onlyWrong && it.status !== "wrong") return false;
-      if (filters.onlyFavorites && !it.favorite) return false;
-      if (q) {
-        const hay = `${it.subject} ${it.topic} ${it.statement} ${it.context}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [questions, filters, query]);
+  const filtered = useMemo(
+    () => filterQuestions(questions, filters, query),
+    [questions, filters, query],
+  );
 
   // Sempre que os filtros ou a busca mudarem, volta pra primeira página —
   // senão o usuário pode ficar "preso" numa página que não existe mais
@@ -117,6 +104,7 @@ function Questoes() {
                   key={q.id}
                   q={q}
                   onToggleFavorite={(id) => questionsStore.toggleFavorite(id)}
+                  listContext={{ ...filters, q: query }}
                 />
               ))}
 
