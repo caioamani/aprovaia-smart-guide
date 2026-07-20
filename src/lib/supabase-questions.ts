@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Question, KnowledgeArea, Language } from "./mock-questions";
+import { applyQuestionOverrides } from "./question-overrides";
 
 // A tabela "questions" guarda "discipline" com os valores crus da API do
 // ENEM. Aqui a gente traduz pra área usada nos filtros da interface.
