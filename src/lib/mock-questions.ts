@@ -13,6 +13,10 @@ export type Alternative = {
   image?: string;
 };
 
+export type ContextBlock =
+  | { type: "text"; value: string }
+  | { type: "image"; value: string };
+
 export type Question = {
   id: string;
   number: number;
@@ -23,6 +27,7 @@ export type Question = {
   language: Language;
   context: string;
   contextImages: string[];
+  contextBlocks?: ContextBlock[];
   statement: string;
   alternatives: Alternative[];
   correct: "A" | "B" | "C" | "D" | "E";
