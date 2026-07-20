@@ -1,13 +1,18 @@
 import { Star, CheckCircle2, XCircle, Circle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import type { Question } from "@/lib/mock-questions";
+import type { QuestionFiltersState } from "./QuestionFilters";
 
 export function QuestionCard({
   q,
   onToggleFavorite,
+  listContext,
 }: {
   q: Question;
   onToggleFavorite: (id: string) => void;
+  // Filtro + busca atualmente aplicados na listagem — repassado na URL pra
+  // que "Anterior"/"Próxima" na tela de detalhe respeitem esse recorte.
+  listContext: QuestionFiltersState & { q: string };
 }) {
   const StatusIcon =
     q.status === "correct" ? CheckCircle2 : q.status === "wrong" ? XCircle : Circle;
@@ -30,6 +35,7 @@ export function QuestionCard({
         <Link
           to="/questoes/$id"
           params={{ id: q.id }}
+          search={listContext}
           className="flex-1 min-w-0 cursor-pointer"
         >
           <div className="flex items-center gap-2 flex-wrap mb-2">
