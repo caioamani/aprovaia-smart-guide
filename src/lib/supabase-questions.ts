@@ -82,6 +82,7 @@ function mapRowToQuestion(row: SupabaseQuestionRow): Question {
     language: languageMap[row.language ?? ""] ?? "Português",
     context: cleanQuestionText(row.context),
     contextImages: realImagesOnly(row.files ?? []),
+    contextBlocks: buildContextBlocks(row.context),
     statement: cleanQuestionText(row.alternatives_introduction ?? row.title),
     alternatives: (row.alternatives ?? []).map((a) => ({
       letter: a.letter,
