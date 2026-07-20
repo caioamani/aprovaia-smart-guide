@@ -201,7 +201,28 @@ function QuestionDetail() {
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
               Contexto
             </div>
-            {(() => {
+            {q.contextBlocks && q.contextBlocks.length > 0 ? (
+              <div className="space-y-3">
+                {q.contextBlocks.map((b, i) =>
+                  b.type === "image" ? (
+                    <img
+                      key={`img-${i}`}
+                      src={b.value}
+                      alt="Imagem de apoio da questão"
+                      loading="lazy"
+                      className="max-w-full rounded-lg ring-1 ring-hairline"
+                    />
+                  ) : (
+                    <p
+                      key={`txt-${i}`}
+                      className="text-sm text-foreground/85 leading-relaxed whitespace-pre-line"
+                    >
+                      {b.value}
+                    </p>
+                  ),
+                )}
+              </div>
+            ) : (() => {
               // Se o "contexto" que sobrou do banco é só a linha de crédito
               // ("Disponível em: ..."), renderiza a imagem primeiro e a
               // legenda depois, com um espaçamento claro entre elas.

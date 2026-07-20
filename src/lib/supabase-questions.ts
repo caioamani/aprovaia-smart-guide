@@ -71,6 +71,32 @@ function cleanQuestionText(text: string | null | undefined): string {
     .trim();
 }
 
+// Divide o contexto cru em blocos de texto/imagem preservando a ordem
+// original — assim a imagem que vem no meio do texto (ex: entre "Texto I"
+// e a legenda da obra) aparece exatamente onde o enunciado colocou.
+function buildContextBlocks(raw: string | null | undefined): import("./mock-questions").ContextBlock[] | undefined {
+  if (!raw) return undefined;
+  const blocks: import("./mock-questions").ContextBlock[] = [];
+  const imgRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let hasImage = false;
+  while ((match = imgRegex.exec(raw)) !== null) {
+    const textChunk = raw.slice(lastIndex, match.index);
+    const cleaned = cleanQuestionText(textChunk);
+    if (cleaned) blocks.push({ type: "text", value: cleaned });
+    if (!isBrokenImage(match[1])) {
+      blocks.push({ type: "image", value: match[1] });
+      hasImage = true;
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (!hasImage) return undefined; // sem imagem inline: usa render antigo
+  const tail = cleanQuestionText(raw.slice(lastIndex));
+  if (tail) blocks.push({ type: "text", value: tail });
+  return blocks;
+}
+
 function mapRowToQuestion(row: SupabaseQuestionRow): Question {
   return {
     id: row.id,
@@ -82,6 +108,7 @@ function mapRowToQuestion(row: SupabaseQuestionRow): Question {
     language: languageMap[row.language ?? ""] ?? "Português",
     context: cleanQuestionText(row.context),
     contextImages: realImagesOnly(row.files ?? []),
+    contextBlocks: buildContextBlocks(row.context),
     statement: cleanQuestionText(row.alternatives_introduction ?? row.title),
     alternatives: (row.alternatives ?? []).map((a) => ({
       letter: a.letter,
