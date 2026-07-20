@@ -201,22 +201,40 @@ function QuestionDetail() {
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
               Contexto
             </div>
-            <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-line">
-              {q.context}
-            </p>
-            {q.contextImages.length > 0 && (
-              <div className="space-y-3 pt-1">
-                {q.contextImages.map((src) => (
-                  <img
-                    key={src}
-                    src={src}
-                    alt="Imagem de apoio da questão"
-                    loading="lazy"
-                    className="max-w-full rounded-lg ring-1 ring-hairline"
-                  />
-                ))}
-              </div>
-            )}
+            {(() => {
+              // Se o "contexto" que sobrou do banco é só a linha de crédito
+              // ("Disponível em: ..."), renderiza a imagem primeiro e a
+              // legenda depois, com um espaçamento claro entre elas.
+              const isJustCaption = /^dispon[ií]vel em/i.test(q.context.trim());
+              const showImagesFirst = isJustCaption && q.contextImages.length > 0;
+              return (
+                <>
+                  {!showImagesFirst && (
+                    <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-line">
+                      {q.context}
+                    </p>
+                  )}
+                  {q.contextImages.length > 0 && (
+                    <div className="space-y-3 pt-1">
+                      {q.contextImages.map((src) => (
+                        <img
+                          key={src}
+                          src={src}
+                          alt="Imagem de apoio da questão"
+                          loading="lazy"
+                          className="max-w-full rounded-lg ring-1 ring-hairline"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {showImagesFirst && (
+                    <p className="pt-4 text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+                      {q.context}
+                    </p>
+                  )}
+                </>
+              );
+            })()}
           </div>
           <p className="text-base text-foreground leading-relaxed font-medium">
             {q.statement}

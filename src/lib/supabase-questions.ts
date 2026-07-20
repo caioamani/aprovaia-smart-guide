@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Question, KnowledgeArea, Language } from "./mock-questions";
+import { applyQuestionOverrides } from "./question-overrides";
 
 // A tabela "questions" guarda "discipline" com os valores crus da API do
 // ENEM. Aqui a gente traduz pra área usada nos filtros da interface.
@@ -129,7 +130,7 @@ async function fetchQuestions(): Promise<Question[]> {
   // Antes a gente excluía questões com imagem inteiras da lista; agora só
   // filtramos os links de imagem quebrados (ver isBrokenImage), então
   // todas as questões entram, com ou sem imagem de verdade.
-  return allRows.map(mapRowToQuestion);
+  return allRows.map(mapRowToQuestion).map(applyQuestionOverrides);
 }
 
 export function useSupabaseQuestions() {
