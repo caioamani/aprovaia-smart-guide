@@ -59,9 +59,11 @@ function cleanQuestionText(text: string | null | undefined): string {
   if (!text) return "";
   return text
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-    // Negrito/itálico em markdown -> mantém só o texto, sem os asteriscos.
+    // Negrito/itálico em markdown -> mantém só o texto, sem os asteriscos
+    // nem os underscores.
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/\*(.*?)\*/g, "$1")
+    .replace(/_(.*?)_/g, "$1")
     // Colchetes escapados que sobram em algumas provas mais antigas.
     .replace(/\\\[/g, "[")
     .replace(/\\\]/g, "]")
