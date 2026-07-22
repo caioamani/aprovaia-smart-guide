@@ -1,5 +1,6 @@
 import cartoonAsset from "@/assets/enem-2023-ling-q05-cartoon.png.asset.json";
 import amamentarAsset from "@/assets/enem-2023-ling-q44-amamentar.png.asset.json";
+import laerteAsset from "@/assets/enem-2023-hum-q56-laerte.png.asset.json";
 import type { Question } from "./mock-questions";
 
 // Ajustes pontuais aplicados sobre o que vem do banco — usado quando
@@ -17,6 +18,10 @@ const overrides: Record<string, QuestionOverride> = {
   // ENEM 2023 · Linguagens · Q44 — campanha "Por que é tão importante amamentar?".
   "4bcaeb63-4465-4ce0-a599-df30ae2e491d": {
     addImages: [amamentarAsset.url],
+  },
+  // ENEM 2023 · Ciências Humanas · Q56 — tirinha do Laerte.
+  "f4e29a8b-307c-468f-85f9-46120c8d42bf": {
+    addImages: [laerteAsset.url],
   },
 };
 
