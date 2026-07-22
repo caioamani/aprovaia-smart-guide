@@ -226,7 +226,7 @@ function QuestionDetail() {
               // Se o "contexto" que sobrou do banco é só a linha de crédito
               // ("Disponível em: ..."), renderiza a imagem primeiro e a
               // legenda depois, com um espaçamento claro entre elas.
-              const isJustCaption = /^dispon[ií]vel em/i.test(q.context.trim());
+              const isJustCaption = /dispon[ií]vel em/i.test(q.context.trim()) && !q.context.includes("\n");
               const showImagesFirst = isJustCaption && q.contextImages.length > 0;
               return (
                 <>
