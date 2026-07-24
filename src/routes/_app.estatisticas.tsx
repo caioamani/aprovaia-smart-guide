@@ -112,9 +112,9 @@ function Estatisticas() {
             <p className="text-xs text-muted-foreground mt-0.5">Últimos 12 meses</p>
           </div>
         </div>
-        <div className="flex items-end gap-3 h-56">
+        <div className="flex items-stretch gap-3 h-56">
           {stats.monthly.map((m, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-2">
+            <div key={i} className="flex-1 h-full flex flex-col items-center gap-2">
               <div className="w-full flex-1 flex items-end">
                 <div
                   className={[
