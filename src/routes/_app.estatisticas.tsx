@@ -1,16 +1,26 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Target, Flame, BookOpen, CalendarCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { useUserStats } from "@/lib/user-stats";
+import { useUserStats, type Granularity } from "@/lib/user-stats";
 
 export const Route = createFileRoute("/_app/estatisticas")({
   component: Estatisticas,
   head: () => ({ meta: [{ title: "Estatísticas · AprovaIA" }] }),
 });
 
+const PERIODS: { value: Granularity; label: string; kpi: string }[] = [
+  { value: "daily", label: "Dia", kpi: "Hoje" },
+  { value: "weekly", label: "Semana", kpi: "Esta semana" },
+  { value: "monthly", label: "Mês", kpi: "Este mês" },
+  { value: "yearly", label: "Ano", kpi: "Este ano" },
+];
+
 function Estatisticas() {
-  const { stats, isLoading, isLoggedOut } = useUserStats();
+  const [granularity, setGranularity] = useState<Granularity>("monthly");
+  const { stats, isLoading, isLoggedOut } = useUserStats(granularity);
+  const activePeriod = PERIODS.find((p) => p.value === granularity)!;
 
   if (isLoggedOut) {
     return (
@@ -61,8 +71,6 @@ function Estatisticas() {
   }
 
   const areaOrder = stats.byArea.slice().sort((a, b) => b.total - a.total);
-  const deltaAnswered = stats.thisMonth.total - stats.lastMonth.total;
-  const deltaAccuracy = stats.thisMonth.accuracy - stats.lastMonth.accuracy;
 
   return (
     <div className="p-8 space-y-6 max-w-[1400px] animate-fade-in">
@@ -85,8 +93,8 @@ function Estatisticas() {
             icon: Flame,
           },
           {
-            label: "Este mês",
-            value: String(stats.thisMonth.total),
+            label: activePeriod.kpi,
+            value: String(stats.current.total),
             suffix: "respondidas",
             icon: CalendarCheck,
           },
@@ -104,16 +112,37 @@ function Estatisticas() {
         ))}
       </div>
 
-      {/* Chart — evolução mensal (% de acerto por mês, últimos 12 meses) */}
+      {/* Chart — evolução por período */}
       <div className="rounded-2xl bg-surface ring-1 ring-hairline p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>
-            <h3 className="font-semibold">Evolução mensal — % de acerto</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Últimos 12 meses</p>
+            <h3 className="font-semibold">Evolução — % de acerto</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {granularity === "daily" && "Últimos 30 dias"}
+              {granularity === "weekly" && "Últimas 12 semanas"}
+              {granularity === "monthly" && "Últimos 12 meses"}
+              {granularity === "yearly" && "Últimos 5 anos"}
+            </p>
+          </div>
+          <div className="inline-flex rounded-lg bg-surface ring-1 ring-hairline p-1">
+            {PERIODS.map((p) => (
+              <button
+                key={p.value}
+                onClick={() => setGranularity(p.value)}
+                className={[
+                  "px-3 py-1.5 text-xs rounded-md transition-all",
+                  granularity === p.value
+                    ? "bg-white/10 text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground",
+                ].join(" ")}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
         </div>
-        <div className="flex items-stretch gap-3 h-56">
-          {stats.monthly.map((m, i) => (
+        <div className="flex items-stretch gap-2 h-56">
+          {stats.timeline.map((m, i) => (
             <div key={i} className="flex-1 h-full flex flex-col items-center gap-2">
               <div className="w-full flex-1 flex items-end">
                 <div
@@ -121,20 +150,22 @@ function Estatisticas() {
                     "w-full rounded-t-md relative group cursor-pointer transition-all",
                     m.total === 0
                       ? "bg-white/5"
-                      : i === stats.monthly.length - 1
+                      : i === stats.timeline.length - 1
                         ? "bg-gradient-to-t from-brand to-brand/40"
                         : "bg-white/10 hover:bg-white/15",
                   ].join(" ")}
                   style={{ height: m.total === 0 ? "2px" : `${Math.max(4, m.accuracy)}%` }}
                 >
                   {m.total > 0 && (
-                    <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-mono opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+                    <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-mono opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-10">
                       {m.accuracy}% ({m.total})
                     </span>
                   )}
                 </div>
               </div>
-              <span className="text-[10px] font-mono text-muted-foreground">{m.label}</span>
+              <span className="text-[10px] font-mono text-muted-foreground truncate max-w-full">
+                {m.label}
+              </span>
             </div>
           ))}
         </div>
@@ -172,18 +203,18 @@ function Estatisticas() {
         </div>
 
         <div className="rounded-2xl bg-surface ring-1 ring-hairline p-6">
-          <h3 className="font-semibold mb-6">Comparação mensal</h3>
+          <h3 className="font-semibold mb-6">Comparação</h3>
           <div className="space-y-5">
             {[
               {
                 label: "Questões respondidas",
-                now: stats.thisMonth.total,
-                prev: stats.lastMonth.total,
+                now: stats.current.total,
+                prev: stats.previous.total,
               },
               {
                 label: "Precisão média",
-                now: `${stats.thisMonth.accuracy}%`,
-                prev: `${stats.lastMonth.accuracy}%`,
+                now: `${stats.current.accuracy}%`,
+                prev: `${stats.previous.accuracy}%`,
               },
             ].map((c) => (
               <div
@@ -194,7 +225,7 @@ function Estatisticas() {
                 <div className="text-right">
                   <div className="text-lg font-semibold tabular-nums">{c.now}</div>
                   <div className="text-[10px] text-muted-foreground font-mono">
-                    vs {c.prev} no mês anterior
+                    vs {c.prev} · {stats.previousLabel.toLowerCase()}
                   </div>
                 </div>
               </div>

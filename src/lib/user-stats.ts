@@ -11,9 +11,6 @@ type AnswerRow = {
   answered_at: string;
 };
 
-// Busca TODAS as tentativas do usuário (não só a mais recente por questão
-// como em useUserAnswers) — pra estatísticas precisamos do histórico
-// completo, não só do status atual de cada questão.
 async function fetchAllAnswers(userId: string): Promise<AnswerRow[]> {
   const { data, error } = await supabase
     .from("user_answers")
@@ -34,27 +31,119 @@ function useRawUserAnswers() {
   });
 }
 
-export type MonthlyStat = { label: string; total: number; accuracy: number };
+export type Granularity = "daily" | "weekly" | "monthly" | "yearly";
+
+export type TimelinePoint = { label: string; total: number; accuracy: number };
 export type AreaStat = { area: KnowledgeArea; correct: number; total: number };
-export type MonthSummary = { total: number; accuracy: number };
+export type PeriodSummary = { total: number; accuracy: number };
 
 export type UserStats = {
   totalAnswered: number;
-  accuracy: number; // 0-100
+  accuracy: number;
   byArea: AreaStat[];
-  monthly: MonthlyStat[]; // últimos 12 meses, incluindo meses sem atividade
+  timeline: TimelinePoint[];
   streakDays: number;
-  thisMonth: MonthSummary;
-  lastMonth: MonthSummary;
+  current: PeriodSummary;
+  previous: PeriodSummary;
+  currentLabel: string;
+  previousLabel: string;
 };
 
 const MONTH_LABELS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
-function monthKey(d: Date) {
-  return `${d.getFullYear()}-${d.getMonth()}`;
+// Bucket key generators — each granularity maps a Date to a stable key.
+function bucketKey(d: Date, g: Granularity): string {
+  switch (g) {
+    case "daily":
+      return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    case "weekly": {
+      // ISO-ish: use Monday as start of week
+      const day = (d.getDay() + 6) % 7; // 0=Mon
+      const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - day);
+      return `w-${monday.getFullYear()}-${monday.getMonth()}-${monday.getDate()}`;
+    }
+    case "monthly":
+      return `${d.getFullYear()}-${d.getMonth()}`;
+    case "yearly":
+      return `${d.getFullYear()}`;
+  }
 }
 
-export function useUserStats() {
+function buildBuckets(g: Granularity): { key: string; label: string; date: Date }[] {
+  const now = new Date();
+  const out: { key: string; label: string; date: Date }[] = [];
+  if (g === "daily") {
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      out.push({ key: bucketKey(d, g), label: String(d.getDate()), date: d });
+    }
+  } else if (g === "weekly") {
+    const day = (now.getDay() + 6) % 7;
+    const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - i * 7);
+      out.push({ key: bucketKey(d, g), label: `${d.getDate()}/${d.getMonth() + 1}`, date: d });
+    }
+  } else if (g === "monthly") {
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push({ key: bucketKey(d, g), label: MONTH_LABELS[d.getMonth()], date: d });
+    }
+  } else {
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date(now.getFullYear() - i, 0, 1);
+      out.push({ key: bucketKey(d, g), label: String(d.getFullYear()), date: d });
+    }
+  }
+  return out;
+}
+
+function currentAndPreviousKeys(g: Granularity): {
+  current: string;
+  previous: string;
+  currentLabel: string;
+  previousLabel: string;
+} {
+  const now = new Date();
+  if (g === "daily") {
+    const yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    return {
+      current: bucketKey(now, g),
+      previous: bucketKey(yest, g),
+      currentLabel: "Hoje",
+      previousLabel: "Ontem",
+    };
+  }
+  if (g === "weekly") {
+    const day = (now.getDay() + 6) % 7;
+    const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+    const lastMonday = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - 7);
+    return {
+      current: bucketKey(thisMonday, g),
+      previous: bucketKey(lastMonday, g),
+      currentLabel: "Esta semana",
+      previousLabel: "Semana passada",
+    };
+  }
+  if (g === "monthly") {
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return {
+      current: bucketKey(now, g),
+      previous: bucketKey(prev, g),
+      currentLabel: "Este mês",
+      previousLabel: "Mês anterior",
+    };
+  }
+  const prev = new Date(now.getFullYear() - 1, 0, 1);
+  return {
+    current: bucketKey(now, g),
+    previous: bucketKey(prev, g),
+    currentLabel: "Este ano",
+    previousLabel: "Ano anterior",
+  };
+}
+
+export function useUserStats(granularity: Granularity = "monthly") {
   const { user } = useAuth();
   const { data: answers, isLoading: loadingAnswers } = useRawUserAnswers();
   const { data: questions, isLoading: loadingQuestions } = useSupabaseQuestions();
@@ -68,8 +157,7 @@ export function useUserStats() {
     const totalCorrect = answers.filter((a) => a.is_correct).length;
     const accuracy = totalAnswered === 0 ? 0 : Math.round((totalCorrect / totalAnswered) * 100);
 
-    // Acerto por área: usa a tentativa mais recente de cada questão, senão
-    // quem refaz a mesma questão várias vezes distorceria a média da área.
+    // Área: última tentativa por questão.
     const latestByQuestion = new Map<string, boolean>();
     for (const a of answers) latestByQuestion.set(a.question_id, a.is_correct);
 
@@ -84,31 +172,24 @@ export function useUserStats() {
     }
     const byArea = Array.from(byAreaMap.entries()).map(([area, v]) => ({ area, ...v }));
 
-    // Evolução mensal — últimos 12 meses, incluindo os sem atividade (0).
-    const now = new Date();
-    const months: { key: string; label: string }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push({ key: monthKey(d), label: MONTH_LABELS[d.getMonth()] });
-    }
-    const byMonth = new Map<string, { correct: number; total: number }>();
+    // Série temporal por granularidade.
+    const buckets = buildBuckets(granularity);
+    const byBucket = new Map<string, { correct: number; total: number }>();
     for (const a of answers) {
-      const key = monthKey(new Date(a.answered_at));
-      const entry = byMonth.get(key) ?? { correct: 0, total: 0 };
+      const key = bucketKey(new Date(a.answered_at), granularity);
+      const entry = byBucket.get(key) ?? { correct: 0, total: 0 };
       entry.total += 1;
       if (a.is_correct) entry.correct += 1;
-      byMonth.set(key, entry);
+      byBucket.set(key, entry);
     }
-    const monthly: MonthlyStat[] = months.map(({ key, label }) => {
-      const entry = byMonth.get(key);
+    const timeline: TimelinePoint[] = buckets.map(({ key, label }) => {
+      const entry = byBucket.get(key);
       const total = entry?.total ?? 0;
       const acc = total === 0 ? 0 : Math.round((entry!.correct / total) * 100);
       return { label, total, accuracy: acc };
     });
 
-    // Streak: dias consecutivos com pelo menos 1 resposta. Se hoje ainda não
-    // tem atividade, conta a partir de ontem — assim quem estudou ontem não
-    // "perde" a sequência só por ainda não ter estudado hoje.
+    // Streak (mesma lógica: dias consecutivos com resposta).
     const daysWithActivity = new Set(answers.map((a) => new Date(a.answered_at).toDateString()));
     let streakDays = 0;
     const cursor = new Date();
@@ -120,30 +201,30 @@ export function useUserStats() {
       cursor.setDate(cursor.getDate() - 1);
     }
 
-    const toSummary = (key: string): MonthSummary => {
-      const e = byMonth.get(key);
+    const { current, previous, currentLabel, previousLabel } = currentAndPreviousKeys(granularity);
+    const toSummary = (key: string): PeriodSummary => {
+      const e = byBucket.get(key);
       const total = e?.total ?? 0;
       const acc = total === 0 ? 0 : Math.round((e!.correct / total) * 100);
       return { total, accuracy: acc };
     };
-    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
     return {
       totalAnswered,
       accuracy,
       byArea,
-      monthly,
+      timeline,
       streakDays,
-      thisMonth: toSummary(monthKey(now)),
-      lastMonth: toSummary(monthKey(lastMonthDate)),
+      current: toSummary(current),
+      previous: toSummary(previous),
+      currentLabel,
+      previousLabel,
     };
-  }, [answers, questions]);
+  }, [answers, questions, granularity]);
 
   return {
     stats,
     isLoading: loadingAnswers || loadingQuestions,
-    // Sem usuário logado não tem o que buscar — trate como "sem dados"
-    // em vez de ficar preso em loading eterno.
     isLoggedOut: !user,
   };
 }
