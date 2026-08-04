@@ -12,12 +12,14 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+// Usa o AI Gateway da Lovable (não depende de quota da conta Google).
+// Configure a secret LOVABLE_API_KEY nas Edge Function secrets do Supabase.
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-const GEMINI_MODEL = "gemini-2.0-flash"; // ajuste aqui se explain-question usa outro modelo
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const AI_MODEL = "google/gemini-3.6-flash";
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,8 +45,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY não configurada nas secrets da function.");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY não configurada nas secrets da function.");
     }
 
     const authHeader = req.headers.get("Authorization");
@@ -116,36 +118,43 @@ Use esse contexto quando fizer sentido (por exemplo, se o aluno pedir pra você 
 "o que eu errei", refira-se ao conteúdo acima). Não invente erros que não estão na lista. Seja
 didático, use exemplos concretos, e mantenha as respostas objetivas (evite textos enormes).`;
 
-    const contents = [
-      { role: "user", parts: [{ text: systemPrompt }] },
-      { role: "model", parts: [{ text: "Entendido. Vou agir como o IA Professor do AprovaIA." }] },
+    const messages = [
+      { role: "system", content: systemPrompt },
       ...history.map((h) => ({
-        role: h.role === "user" ? "user" : "model",
-        parts: [{ text: h.text }],
+        role: h.role === "user" ? "user" : "assistant",
+        content: h.text,
       })),
-      { role: "user", parts: [{ text: message }] },
+      { role: "user", content: message },
     ];
 
-    const geminiRes = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+    const aiRes = await fetch(AI_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents,
-        generationConfig: { temperature: 0.6, maxOutputTokens: 800 },
-      }),
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": LOVABLE_API_KEY,
+        "X-Lovable-AIG-SDK": "fetch",
+      },
+      body: JSON.stringify({ model: AI_MODEL, messages, temperature: 0.6 }),
     });
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      throw new Error(`Erro na chamada ao Gemini: ${errText}`);
+    if (!aiRes.ok) {
+      const errText = await aiRes.text();
+      if (aiRes.status === 429) {
+        throw new Error("Muitas requisições agora. Tenta de novo em alguns segundos.");
+      }
+      if (aiRes.status === 402) {
+        throw new Error("Créditos de IA esgotados. Adicione créditos no seu workspace Lovable.");
+      }
+      throw new Error(`Erro na chamada à IA: ${errText}`);
     }
 
-    const geminiData = await geminiRes.json();
-    const reply: string | undefined = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const aiData = await aiRes.json();
+    const reply: string | undefined = aiData?.choices?.[0]?.message?.content;
 
     if (!reply) {
-      throw new Error("O Gemini não retornou nenhuma resposta.");
+      throw new Error("A IA não retornou nenhuma resposta.");
     }
+
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
