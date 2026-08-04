@@ -12,12 +12,14 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+// Usa o AI Gateway da Lovable (não depende de quota da conta Google).
+// Configure a secret LOVABLE_API_KEY nas Edge Function secrets do Supabase.
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-const GEMINI_MODEL = "gemini-2.0-flash"; // ajuste aqui se explain-question usa outro modelo
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const AI_MODEL = "google/gemini-3.6-flash";
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
