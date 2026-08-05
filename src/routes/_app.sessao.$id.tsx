@@ -25,7 +25,8 @@ export const Route = createFileRoute("/_app/sessao/$id")({
 });
 
 function SessionPage() {
-  const { session } = Route.useLoaderData();
+  const { id } = Route.useParams();
+  const session = studySessions.find((s) => s.id === id)!;
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);

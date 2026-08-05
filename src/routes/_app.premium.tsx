@@ -10,7 +10,7 @@ const features: { label: string; free: boolean | string; premium: boolean | stri
   { label: "Plano de estudos personalizado", free: true, premium: true },
   { label: "Banco de questões oficial ENEM", free: "Limitado", premium: "Ilimitado" },
   { label: "Correções de redação por IA", free: "2/mês", premium: "Ilimitadas" },
-  { label: "IA Professor 24/7", free: "20 msgs/dia", premium: "Ilimitado" },
+  { label: "Elo IA 24/7", free: "20 msgs/dia", premium: "Ilimitado" },
   { label: "Simulados TRI completos", free: false, premium: true },
   { label: "Mapas mentais gerados por IA", free: false, premium: true },
   { label: "Reorganização automática do cronograma", free: false, premium: true },

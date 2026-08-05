@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  Sparkles,
   Send,
   BookOpen,
   FileText,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { EloAvatar } from "@/components/EloAvatar";
 import {
   buildGreeting,
   useSendTutorMessage,
@@ -22,7 +22,7 @@ import {
 
 export const Route = createFileRoute("/_app/ia")({
   component: IATutor,
-  head: () => ({ meta: [{ title: "IA Professor · AprovaIA" }] }),
+  head: () => ({ meta: [{ title: "Elo IA · AprovaIA" }] }),
 });
 
 const quickActions: { icon: typeof Lightbulb; label: string; prompt: (topic: string) => string }[] =
@@ -103,7 +103,7 @@ function IATutor() {
     const text = (textOverride ?? draft).trim();
     if (!text || sendMessage.isPending) return;
     if (!user) {
-      toast.error("Você precisa estar logado pra falar com a IA Professor.");
+      toast.error("Você precisa estar logado pra falar com a Elo IA.");
       return;
     }
 
@@ -124,11 +124,9 @@ function IATutor() {
       {/* Header */}
       <div className="px-8 py-6 border-b border-hairline flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-full bg-brand/15 ring-1 ring-brand/30 grid place-items-center">
-            <Sparkles className="size-4 text-brand" />
-          </div>
+          <EloAvatar className="size-10" />
           <div>
-            <h1 className="font-semibold">IA Professor</h1>
+            <h1 className="font-semibold">Elo IA</h1>
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
               <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Online · Conhece todo o seu histórico
@@ -150,9 +148,7 @@ function IATutor() {
             messages.map((m) => (
               <div key={m.id} className={`flex gap-3 ${m.role === "user" ? "justify-end" : ""}`}>
                 {m.role === "ai" && (
-                  <div className="size-8 rounded-full bg-brand/15 ring-1 ring-brand/30 grid place-items-center shrink-0">
-                    <Sparkles className="size-3.5 text-brand" />
-                  </div>
+                  <EloAvatar />
                 )}
                 <div
                   className={[
@@ -170,9 +166,7 @@ function IATutor() {
 
           {sendMessage.isPending && (
             <div className="flex gap-3">
-              <div className="size-8 rounded-full bg-brand/15 ring-1 ring-brand/30 grid place-items-center shrink-0">
-                <Sparkles className="size-3.5 text-brand" />
-              </div>
+              <EloAvatar />
               <div className="px-5 py-3.5 rounded-2xl rounded-tl-sm text-sm bg-surface ring-1 ring-hairline inline-flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="size-3.5 animate-spin" />
                 Pensando...
@@ -209,7 +203,7 @@ function IATutor() {
                   handleSend();
                 }
               }}
-              placeholder="Pergunte qualquer coisa ao seu professor particular…"
+              placeholder="Pergunte qualquer coisa para a Elo IA…"
               className="flex-1 bg-transparent resize-none outline-none text-sm placeholder:text-muted-foreground py-1"
             />
             <button
@@ -226,7 +220,7 @@ function IATutor() {
             </button>
           </div>
           <p className="text-[10px] text-muted-foreground text-center">
-            A IA usa seu perfil e histórico para respostas personalizadas.
+            A Elo IA usa seu perfil e histórico para respostas personalizadas.
           </p>
         </div>
       </div>
