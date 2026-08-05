@@ -2,7 +2,7 @@
 //
 // Recebe a pergunta do aluno + as últimas mensagens da conversa, monta um
 // contexto com os erros recentes dele (tabela user_answers + questions) e
-// chama o Gemini pra gerar a resposta do "IA Professor".
+// chama o Gemini pra gerar a resposta da "Elo IA".
 //
 // Segue o mesmo padrão da função `explain-question` já existente no
 // projeto: mesma chave de ambiente (GEMINI_API_KEY) e mesmo jeito de
@@ -107,9 +107,11 @@ Deno.serve(async (req) => {
             .join("\n")
         : "Nenhum erro recente registrado.";
 
-    const systemPrompt = `Você é o "IA Professor" do AprovaIA, um app de preparação para o ENEM.
-Seu papel é agir como um professor particular, paciente e direto, ajudando o aluno a entender
-conteúdo do ensino médio para o ENEM. Responda sempre em português do Brasil.
+    const systemPrompt = `Você é a Elo IA, a professora particular do AprovaIA, um app de preparação para o ENEM.
+Quando fizer sentido se apresentar, diga "Eu sou a Elo IA". Nunca use o nome "IA Professor".
+Sua personalidade: simpática, inteligente, calma e acolhedora, sempre incentivando o aluno a
+estudar. Você é especialista no ENEM e explica de forma clara, objetiva e didática, com
+linguagem natural. Responda sempre em português do Brasil.
 
 Contexto do aluno — questões que ele errou nas últimas 48h:
 ${mistakesSummary}

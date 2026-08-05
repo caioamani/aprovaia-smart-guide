@@ -26,7 +26,7 @@ type NavItem = {
 const primaryNav: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/questoes", label: "Questões", icon: BookOpenCheck },
-  { to: "/ia", label: "IA Professor", icon: Sparkles },
+  { to: "/ia", label: "Elo IA", icon: Sparkles },
   { to: "/cronograma", label: "Cronograma", icon: CalendarDays },
   { to: "/estatisticas", label: "Estatísticas", icon: BarChart3 },
   { to: "/redacao", label: "Redação", icon: PenLine },
