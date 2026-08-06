@@ -91,15 +91,21 @@ export function useStudentContext() {
 
 /**
  * Limpa marcações de markdown que a IA às vezes devolve (**negrito**,
- * ### títulos) pra exibir como texto corrido na bolha de chat, já que a
- * interface não renderiza markdown. Marcadores de lista soltos ("* item")
- * viram "• item" pra não sobrar asterisco solto na tela.
+ * ### títulos, *itálico*, $fórmulas$, --- separadores) pra exibir como
+ * texto corrido na bolha de chat, já que a interface não renderiza
+ * markdown. Marcadores de lista soltos ("* item") viram "• item".
  */
 export function formatTutorText(text: string): string {
   return text
     .replace(/^#{1,6}\s+/gm, "") // remove ### / ## / # no início da linha
     .replace(/\*\*([\s\S]+?)\*\*/g, "$1") // remove **negrito**
-    .replace(/^\*\s+/gm, "• ") // marcador de lista solto -> bullet
+    .replace(/^[ \t]*\*\s+/gm, "• ") // marcador de lista (inclusive indentado) -> bullet
+    // ^ tem que rodar ANTES do itálico, senão "*   *texto*" (bullet seguido de
+    // itálico) casa errado e some com o marcador.
+    .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "$1") // remove *itálico*
+    .replace(/\$\$?([^$]+?)\$\$?/g, "$1") // remove $ ou $$ de fórmulas em LaTeX
+    .replace(/^\s*-{3,}\s*$/gm, "") // remove linhas "---" (separador)
+    .replace(/\n{3,}/g, "\n\n") // colapsa linhas em branco sobrando
     .trim();
 }
 
