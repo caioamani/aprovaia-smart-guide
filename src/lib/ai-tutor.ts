@@ -89,6 +89,20 @@ export function useStudentContext() {
   return { context, isLoading: isLoading || !questions };
 }
 
+/**
+ * Limpa marcações de markdown que a IA às vezes devolve (**negrito**,
+ * ### títulos) pra exibir como texto corrido na bolha de chat, já que a
+ * interface não renderiza markdown. Marcadores de lista soltos ("* item")
+ * viram "• item" pra não sobrar asterisco solto na tela.
+ */
+export function formatTutorText(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, "") // remove ### / ## / # no início da linha
+    .replace(/\*\*([\s\S]+?)\*\*/g, "$1") // remove **negrito**
+    .replace(/^\*\s+/gm, "• ") // marcador de lista solto -> bullet
+    .trim();
+}
+
 /** Monta a saudação inicial (substitui o texto fixo do mock). */
 export function buildGreeting(
   context: StudentContext | null | undefined,
