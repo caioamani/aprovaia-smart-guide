@@ -124,7 +124,7 @@ function IATutor() {
       {/* Header */}
       <div className="px-8 py-6 border-b border-hairline flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <EloAvatar className="size-16" />
+          <EloAvatar className="size-14" />
           <div>
             <h1 className="font-semibold">Elo IA</h1>
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
