@@ -138,7 +138,7 @@ function IATutor() {
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-8 py-8">
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-5xl mx-auto space-y-6">
           {loadingHistory ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
@@ -152,7 +152,7 @@ function IATutor() {
                 )}
                 <div
                   className={[
-                    "px-5 py-3.5 rounded-2xl text-sm leading-relaxed max-w-[75%] whitespace-pre-wrap",
+                    "px-5 py-3.5 rounded-2xl text-sm leading-relaxed max-w-[85%] whitespace-pre-wrap",
                     m.role === "user"
                       ? "bg-brand text-brand-foreground rounded-tr-sm"
                       : "bg-surface ring-1 ring-hairline rounded-tl-sm",
