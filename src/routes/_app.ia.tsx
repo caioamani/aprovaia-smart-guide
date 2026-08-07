@@ -15,6 +15,8 @@ import { EloAvatar } from "@/components/EloAvatar";
 import {
   buildGreeting,
   formatTutorText,
+  getTutorImageUrl,
+  isTutorImageMessage,
   useSendTutorMessage,
   useStudentContext,
   useTutorHistory,
@@ -189,16 +191,26 @@ function IATutor() {
                 className={`flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 ${m.role === "user" ? "justify-end" : ""}`}
               >
                 {m.role === "ai" && <EloAvatar className="size-9" />}
-                <div
-                  className={[
-                    "px-5 py-3.5 rounded-2xl text-sm leading-relaxed max-w-[75%] whitespace-pre-wrap",
-                    m.role === "user"
-                      ? "bg-brand text-brand-foreground rounded-tr-sm"
-                      : "bg-surface ring-1 ring-hairline rounded-tl-sm",
-                  ].join(" ")}
-                >
-                  {formatTutorText(m.text)}
-                </div>
+                {isTutorImageMessage(m.text) ? (
+                  <div className="p-1.5 rounded-2xl max-w-[75%] bg-surface ring-1 ring-hairline rounded-tl-sm">
+                    <img
+                      src={getTutorImageUrl(m.text)}
+                      alt="Imagem gerada pela Elo IA"
+                      className="rounded-xl max-w-full max-h-80 object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className={[
+                      "px-5 py-3.5 rounded-2xl text-sm leading-relaxed max-w-[75%] whitespace-pre-wrap",
+                      m.role === "user"
+                        ? "bg-brand text-brand-foreground rounded-tr-sm"
+                        : "bg-surface ring-1 ring-hairline rounded-tl-sm",
+                    ].join(" ")}
+                  >
+                    {formatTutorText(m.text)}
+                  </div>
+                )}
               </div>
             ))
           )}
