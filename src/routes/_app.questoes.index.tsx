@@ -10,6 +10,8 @@ import {
   type QuestionFiltersState,
 } from "@/components/questions/QuestionFilters";
 import { questionsStore, useQuestions } from "@/lib/questions-store";
+import { useSupabaseQuestions } from "@/lib/supabase-questions";
+
 import { filterQuestions } from "@/lib/question-filters";
 import type { KnowledgeArea, Language } from "@/lib/mock-questions";
 
