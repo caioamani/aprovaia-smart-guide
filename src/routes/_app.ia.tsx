@@ -188,11 +188,7 @@ function IATutor() {
                 key={m.id}
                 className={`flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 ${m.role === "user" ? "justify-end" : ""}`}
               >
-                {m.role === "ai" && (
-                  <div className="size-8 rounded-full bg-brand/15 ring-1 ring-brand/30 grid place-items-center shrink-0">
-                    <Sparkles className="size-3.5 text-brand" />
-                  </div>
-                )}
+                {m.role === "ai" && <EloAvatar className="size-8" />}
                 <div
                   className={[
                     "px-5 py-3.5 rounded-2xl text-sm leading-relaxed max-w-[75%] whitespace-pre-wrap",
@@ -209,9 +205,7 @@ function IATutor() {
 
           {sendMessage.isPending && (
             <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="size-8 rounded-full bg-brand/15 ring-1 ring-brand/30 grid place-items-center shrink-0">
-                <Sparkles className="size-3.5 text-brand" />
-              </div>
+              <EloAvatar className="size-8" />
               <div className="px-5 py-3.5 rounded-2xl rounded-tl-sm text-sm bg-surface ring-1 ring-hairline inline-flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="size-3.5 animate-spin" />
                 Pensando...
