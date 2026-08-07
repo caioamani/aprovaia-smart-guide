@@ -19,6 +19,28 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const GEMINI_MODEL = "gemini-3.1-flash-lite";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
+// Modelo dedicado de geração de imagem ("nano banana"). Tem cota gratuita
+// própria na API (não é a mesma cota do modelo de texto acima), então não
+// precisa de billing habilitado pra funcionar em conta nova.
+const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
+const GEMINI_IMAGE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
+
+// Prefixo usado pra marcar, dentro da coluna "content" (texto simples), que
+// uma mensagem é uma imagem gerada — o valor depois do prefixo é a URL
+// pública no Storage, não a imagem em si. Mantém o banco leve.
+const IMAGE_PREFIX = "IMG::";
+
+// Tag que a IA usa pra sinalizar "quero gerar uma imagem" em vez de
+// responder em texto — ver instrução no systemPrompt logo abaixo.
+const IMAGE_TAG_REGEX = /^\s*\[IMAGEM:\s*([\s\S]+?)\]\s*$/;
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -132,7 +154,15 @@ markdown. Não use **negrito**, *itálico*, títulos com # ou ###, nem linhas se
 Para listas, use números (1., 2., 3.) ou hífen seguido de espaço (- item), nunca asterisco. Para
 fórmulas ou expressões matemáticas, escreva direto em texto comum, sem cifrão (ex: f(x) = ax + b,
 nunca $f(x) = ax + b$). Se precisar destacar um termo importante, use apenas aspas ou dois-pontos,
-nunca símbolos de markdown.`;
+nunca símbolos de markdown.
+
+Geração de imagem: se o aluno pedir explicitamente algo visual — um desenho, uma ilustração, um
+diagrama, "mostra uma imagem de", "gera uma imagem", "desenha", etc. — não responda em texto.
+Responda SOMENTE com uma linha no formato exato: [IMAGEM: <descrição detalhada em inglês do que
+desenhar, pensada para um gerador de imagens>], sem mais nada antes ou depois. Se o pedido for só
+uma dúvida de conteúdo (mesmo que sobre algo visual, tipo "como funciona a fotossíntese"), responda
+normalmente em texto — só use a tag [IMAGEM: ...] quando o aluno realmente quiser ver uma imagem
+gerada.`;
 
     const contents = [
       { role: "user", parts: [{ text: systemPrompt }] },
@@ -165,7 +195,65 @@ nunca símbolos de markdown.`;
       throw new Error("O Gemini não retornou nenhuma resposta.");
     }
 
-    return new Response(JSON.stringify({ reply }), {
+    // Se a IA sinalizou que quer gerar uma imagem em vez de responder em
+    // texto, faz uma segunda chamada — agora pro modelo de imagem — sobe o
+    // resultado pro Storage e devolve a URL pública (não o base64 direto).
+    const imageMatch = reply.match(IMAGE_TAG_REGEX);
+    if (imageMatch) {
+      const imagePrompt = imageMatch[1].trim();
+      console.log(`Gerando imagem para ${user.id}: ${imagePrompt}`);
+
+      const imageRes = await fetch(`${GEMINI_IMAGE_URL}?key=${GEMINI_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: imagePrompt }] }],
+          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+        }),
+      });
+
+      if (!imageRes.ok) {
+        const errText = await imageRes.text();
+        throw new Error(`Erro na chamada ao Gemini (imagem): ${errText}`);
+      }
+
+      const imageData = await imageRes.json();
+      const imagePart = imageData?.candidates?.[0]?.content?.parts?.find(
+        (p: { inlineData?: { data?: string; mimeType?: string } }) => p.inlineData?.data,
+      );
+
+      if (!imagePart?.inlineData?.data) {
+        throw new Error("O Gemini não retornou nenhuma imagem.");
+      }
+
+      const mimeType = imagePart.inlineData.mimeType ?? "image/png";
+      const extension = mimeType.split("/")[1] ?? "png";
+      const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
+
+      // Sobe a imagem pro Storage (bucket "tutor-images") em vez de
+      // devolver base64 — assim o banco só guarda a URL, bem mais leve.
+      const { error: uploadError } = await supabase.storage
+        .from("tutor-images")
+        .upload(path, base64ToUint8Array(imagePart.inlineData.data), {
+          contentType: mimeType,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Erro ao salvar imagem no Storage: ${uploadError.message}`);
+      }
+
+      const { data: publicUrlData } = supabase.storage.from("tutor-images").getPublicUrl(path);
+
+      // isImage: true avisa o front que essa resposta é uma imagem (URL),
+      // não texto — ver isTutorImageMessage() em src/lib/ai-tutor.ts.
+      return new Response(
+        JSON.stringify({ reply: `${IMAGE_PREFIX}${publicUrlData.publicUrl}`, isImage: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(JSON.stringify({ reply, isImage: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
