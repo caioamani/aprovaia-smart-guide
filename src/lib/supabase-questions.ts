@@ -32,12 +32,15 @@ type SupabaseQuestionRow = {
   title: string | null;
   discipline: string | null;
   language: string | null;
-  context: string | null;
-  files: string[] | null;
+  // Colunas pesadas: só vêm na busca de UMA questão (tela de resolução).
+  // Na listagem elas são omitidas pra reduzir drasticamente o payload.
+  context?: string | null;
+  files?: string[] | null;
   alternatives_introduction: string | null;
-  alternatives: SupabaseAlternative[];
+  alternatives?: SupabaseAlternative[] | null;
   correct_alternative: string | null;
 };
+
 
 // Um bom número de imagens da API do ENEM aponta pra esse placeholder
 // genérico quando a imagem real não foi capturada — nesse caso específico
@@ -131,34 +134,43 @@ function mapRowToQuestion(row: SupabaseQuestionRow): Question {
 
 const PAGE_SIZE = 1000; // limite padrão de linhas por requisição do Supabase
 
+// Colunas leves — o suficiente pra montar a listagem/filtros. Sem "context",
+// "files" e "alternatives" (que são o grosso do payload) a lista carrega
+// muito mais rápido.
+const LIST_COLUMNS =
+  "id, exam_year, index, title, discipline, language, alternatives_introduction, correct_alternative";
+
+const FULL_COLUMNS = `${LIST_COLUMNS}, context, files, alternatives`;
+
 async function fetchQuestions(): Promise<Question[]> {
+  // Primeiro descobrimos quantas linhas existem pra buscar todas as páginas
+  // em paralelo, em vez de uma depois da outra.
+  const { count, error: countError } = await supabase
+    .from("questions")
+    .select("id", { count: "exact", head: true });
+
+  if (countError) throw countError;
+
+  const total = count ?? 0;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const results = await Promise.all(
+    Array.from({ length: pages }, (_, i) =>
+      supabase
+        .from("questions")
+        .select(LIST_COLUMNS)
+        .order("exam_year", { ascending: false })
+        .order("index", { ascending: true })
+        .range(i * PAGE_SIZE, i * PAGE_SIZE + PAGE_SIZE - 1),
+    ),
+  );
+
   const allRows: SupabaseQuestionRow[] = [];
-  let from = 0;
-
-  // O Supabase/PostgREST devolve no máximo 1000 linhas por chamada, então
-  // buscamos em páginas até não sobrar mais nada.
-  while (true) {
-    const { data, error } = await supabase
-      .from("questions")
-      .select(
-        "id, exam_year, index, title, discipline, language, context, files, alternatives_introduction, alternatives, correct_alternative",
-      )
-      .order("exam_year", { ascending: false })
-      .order("index", { ascending: true })
-      .range(from, from + PAGE_SIZE - 1);
-
+  for (const { data, error } of results) {
     if (error) throw error;
-    if (!data || data.length === 0) break;
-
-    allRows.push(...(data as SupabaseQuestionRow[]));
-
-    if (data.length < PAGE_SIZE) break; // última página
-    from += PAGE_SIZE;
+    allRows.push(...((data ?? []) as unknown as SupabaseQuestionRow[]));
   }
 
-  // Antes a gente excluía questões com imagem inteiras da lista; agora só
-  // filtramos os links de imagem quebrados (ver isBrokenImage), então
-  // todas as questões entram, com ou sem imagem de verdade.
   return allRows.map(mapRowToQuestion).map(applyQuestionOverrides);
 }
 
@@ -166,9 +178,39 @@ export function useSupabaseQuestions() {
   return useQuery({
     queryKey: ["questions"],
     queryFn: fetchQuestions,
-    staleTime: 5 * 60 * 1000, // 5 min — questões não mudam com frequência
+    staleTime: 30 * 60 * 1000, // questões não mudam — evita refetch ao trocar de aba
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
+
+// Busca UMA questão completa (contexto, imagens e alternativas) — usada só
+// na tela de resolução, sob demanda.
+async function fetchQuestionById(id: string): Promise<Question | null> {
+  const { data, error } = await supabase
+    .from("questions")
+    .select(FULL_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return applyQuestionOverrides(mapRowToQuestion(data as unknown as SupabaseQuestionRow));
+}
+
+export function useQuestionDetail(id: string) {
+  return useQuery({
+    queryKey: ["question", id],
+    queryFn: () => fetchQuestionById(id),
+    enabled: !!id,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+
 
 // ---------------------------------------------------------------------
 // Respostas do usuário (tabela user_answers)
