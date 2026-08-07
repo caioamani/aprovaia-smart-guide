@@ -176,7 +176,7 @@ function IATutor() {
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-8 py-8">
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
           {loadingHistory ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
@@ -217,7 +217,7 @@ function IATutor() {
 
       {/* Composer */}
       <div className="border-t border-hairline p-6 bg-background/50 backdrop-blur">
-        <div className="max-w-3xl mx-auto space-y-3">
+        <div className="w-full space-y-3">
           <div className="flex gap-2 flex-wrap">
             {quickActions.map((a) => (
               <button
