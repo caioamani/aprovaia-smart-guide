@@ -12,18 +12,17 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+// Tudo passa pelo Lovable AI Gateway — a cota gratuita direta da API do
+// Google (generativelanguage) está zerada, então chamadas diretas voltam 429.
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-const GEMINI_MODEL = "gemini-3.1-flash-lite";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GATEWAY_CHAT_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GATEWAY_IMAGE_URL = "https://ai.gateway.lovable.dev/v1/images/generations";
+const CHAT_MODEL = "google/gemini-3.6-flash";
+const IMAGE_MODEL = "openai/gpt-image-2";
 
-// Modelo dedicado de geração de imagem ("nano banana"). Tem cota gratuita
-// própria na API (não é a mesma cota do modelo de texto acima), então não
-// precisa de billing habilitado pra funcionar em conta nova.
-const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
-const GEMINI_IMAGE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
 
 // Prefixo usado pra marcar, dentro da coluna "content" (texto simples), que
 // uma mensagem é uma imagem gerada — o valor depois do prefixo é a URL
