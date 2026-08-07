@@ -67,8 +67,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY não configurada nas secrets da function.");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY não configurada nas secrets da function.");
+
     }
 
     const authHeader = req.headers.get("Authorization");
