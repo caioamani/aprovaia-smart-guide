@@ -9,10 +9,10 @@ import { ProgressBar } from "@/components/questions/ProgressBar";
 import { SessionStats, type SessionStatsData } from "@/components/questions/SessionStats";
 import { ReportProblemDialog } from "@/components/questions/ReportProblemDialog";
 import { questionsStore, useQuestions } from "@/lib/questions-store";
-import { useAnswerQuestion, useQuestionExplanation } from "@/lib/supabase-questions";
+import { useAnswerQuestion, useQuestionDetail, useQuestionExplanation } from "@/lib/supabase-questions";
 import { filterQuestions } from "@/lib/question-filters";
 import type { QuestionFiltersState } from "@/components/questions/QuestionFilters";
-import type { KnowledgeArea, Language } from "@/lib/mock-questions";
+import type { KnowledgeArea, Language, Question } from "@/lib/mock-questions";
 
 // O mesmo filtro (+ texto de busca) aplicado na listagem (/questoes) chega
 // aqui pela URL, assim "Anterior"/"Próxima" navegam dentro do resultado
@@ -61,7 +61,7 @@ function QuestionDetail() {
   // questão, sob demanda — bem mais rápido que carregar tudo de uma vez.
   const { data: full, isLoading: detailLoading } = useQuestionDetail(id);
 
-  const q = useMemo(() => {
+  const q = useMemo<Question | undefined>(() => {
     if (!full) return listItem;
     // Status/favorito vivem no store local, então preservamos.
     return { ...full, status: listItem?.status ?? full.status, favorite: listItem?.favorite ?? false };
