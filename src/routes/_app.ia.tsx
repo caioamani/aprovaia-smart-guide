@@ -98,22 +98,16 @@ function IATutor() {
     };
     const base = !history || history.length === 0 ? [greeting] : history;
 
-    if (!pendingUserMessage) return base;
+    // Se a mensagem otimista já chegou no histórico real (veio do banco),
+    // não duplica ela na tela.
+    const alreadyInHistory =
+      pendingUserMessage &&
+      base.some((m) => m.role === "user" && m.text === pendingUserMessage.text);
 
-    // Se a mensagem otimista já chegou no histórico real (voltou do banco
-    // com outro id), reaproveita o id otimista como key. Isso evita que o
-    // React desmonte/remonte a bolha (o que faria a animação de entrada
-    // disparar de novo e "piscar").
-    const matchIndex = base.findIndex(
-      (m) => m.role === "user" && m.text === pendingUserMessage.text && m.id !== pendingUserMessage.id,
-    );
-    if (matchIndex !== -1) {
-      const merged = [...base];
-      merged[matchIndex] = { ...merged[matchIndex], id: pendingUserMessage.id };
-      return merged;
+    if (pendingUserMessage && !alreadyInHistory) {
+      return [...base, pendingUserMessage];
     }
-
-    return [...base, pendingUserMessage];
+    return base;
   }, [history, context, firstName, pendingUserMessage]);
 
   // Assim que o histórico real trouxer a mensagem otimista, descarta ela
@@ -194,7 +188,7 @@ function IATutor() {
             messages.map((m) => (
               <div
                 key={m.id}
-                className={`flex gap-3 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-500 ease-out ${m.role === "user" ? "justify-end" : ""}`}
+                className={`flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 ${m.role === "user" ? "justify-end" : ""}`}
               >
                 {m.role === "ai" && (
                   <div className="size-8 rounded-full bg-brand/15 ring-1 ring-brand/30 grid place-items-center shrink-0">
@@ -216,7 +210,7 @@ function IATutor() {
           )}
 
           {sendMessage.isPending && (
-            <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-500 ease-out">
+            <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="size-8 rounded-full bg-brand/15 ring-1 ring-brand/30 grid place-items-center shrink-0">
                 <Sparkles className="size-3.5 text-brand" />
               </div>
@@ -263,7 +257,7 @@ function IATutor() {
               type="button"
               onClick={() => handleSend()}
               disabled={sendMessage.isPending || !draft.trim()}
-              className="size-9 rounded-lg bg-brand text-brand-foreground grid place-items-center hover:bg-brand/90 active:scale-90 transition-all shrink-0 disabled:opacity-40 disabled:pointer-events-none"
+              className="size-9 rounded-lg bg-brand text-brand-foreground grid place-items-center hover:bg-brand/90 transition shrink-0 disabled:opacity-40 disabled:pointer-events-none"
             >
               {sendMessage.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
