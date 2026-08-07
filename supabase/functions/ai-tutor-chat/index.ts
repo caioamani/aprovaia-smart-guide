@@ -12,18 +12,17 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+// Tudo passa pelo Lovable AI Gateway — a cota gratuita direta da API do
+// Google (generativelanguage) está zerada, então chamadas diretas voltam 429.
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-const GEMINI_MODEL = "gemini-3.1-flash-lite";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GATEWAY_CHAT_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GATEWAY_IMAGE_URL = "https://ai.gateway.lovable.dev/v1/images/generations";
+const CHAT_MODEL = "google/gemini-3.6-flash";
+const IMAGE_MODEL = "openai/gpt-image-2";
 
-// Modelo dedicado de geração de imagem ("nano banana"). Tem cota gratuita
-// própria na API (não é a mesma cota do modelo de texto acima), então não
-// precisa de billing habilitado pra funcionar em conta nova.
-const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
-const GEMINI_IMAGE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`;
 
 // Prefixo usado pra marcar, dentro da coluna "content" (texto simples), que
 // uma mensagem é uma imagem gerada — o valor depois do prefixo é a URL
@@ -68,8 +67,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY não configurada nas secrets da function.");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY não configurada nas secrets da function.");
+
     }
 
     const authHeader = req.headers.get("Authorization");
@@ -164,35 +164,40 @@ uma dúvida de conteúdo (mesmo que sobre algo visual, tipo "como funciona a fot
 normalmente em texto — só use a tag [IMAGEM: ...] quando o aluno realmente quiser ver uma imagem
 gerada.`;
 
-    const contents = [
-      { role: "user", parts: [{ text: systemPrompt }] },
-      { role: "model", parts: [{ text: "Entendido. Vou agir como o IA Professor do AprovaIA." }] },
+    const messages = [
+      { role: "system", content: systemPrompt },
       ...history.map((h) => ({
-        role: h.role === "user" ? "user" : "model",
-        parts: [{ text: h.text }],
+        role: h.role === "user" ? "user" : "assistant",
+        content: h.text,
       })),
-      { role: "user", parts: [{ text: message }] },
+      { role: "user", content: message },
     ];
 
-    const geminiRes = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+    const chatRes = await fetch(GATEWAY_CHAT_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": LOVABLE_API_KEY,
+        "X-Lovable-AIG-SDK": "fetch",
+      },
       body: JSON.stringify({
-        contents,
-        generationConfig: { temperature: 0.6, maxOutputTokens: 800 },
+        model: CHAT_MODEL,
+        messages,
+        temperature: 0.6,
+        max_tokens: 800,
       }),
     });
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      throw new Error(`Erro na chamada ao Gemini: ${errText}`);
+    if (!chatRes.ok) {
+      const errText = await chatRes.text();
+      throw new Error(`Erro na chamada à IA: ${errText}`);
     }
 
-    const geminiData = await geminiRes.json();
-    const reply: string | undefined = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const chatData = await chatRes.json();
+    const reply: string | undefined = chatData?.choices?.[0]?.message?.content;
 
     if (!reply) {
-      throw new Error("O Gemini não retornou nenhuma resposta.");
+      throw new Error("A IA não retornou nenhuma resposta.");
     }
 
     // Se a IA sinalizou que quer gerar uma imagem em vez de responder em
@@ -203,38 +208,45 @@ gerada.`;
       const imagePrompt = imageMatch[1].trim();
       console.log(`Gerando imagem para ${user.id}: ${imagePrompt}`);
 
-      const imageRes = await fetch(`${GEMINI_IMAGE_URL}?key=${GEMINI_API_KEY}`, {
+      const imageRes = await fetch(GATEWAY_IMAGE_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Lovable-API-Key": LOVABLE_API_KEY,
+          "X-Lovable-AIG-SDK": "fetch",
+        },
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: imagePrompt }] }],
-          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+          model: IMAGE_MODEL,
+          prompt: imagePrompt,
+          quality: "low",
         }),
       });
 
       if (!imageRes.ok) {
         const errText = await imageRes.text();
-        throw new Error(`Erro na chamada ao Gemini (imagem): ${errText}`);
+        throw new Error(`Erro na chamada à IA (imagem): ${errText}`);
       }
 
       const imageData = await imageRes.json();
-      const imagePart = imageData?.candidates?.[0]?.content?.parts?.find(
-        (p: { inlineData?: { data?: string; mimeType?: string } }) => p.inlineData?.data,
-      );
+      const b64: string | undefined =
+        imageData?.data?.[0]?.b64_json ??
+        imageData?.data?.[0]?.image_base64 ??
+        undefined;
 
-      if (!imagePart?.inlineData?.data) {
-        throw new Error("O Gemini não retornou nenhuma imagem.");
+      if (!b64) {
+        throw new Error("A IA não retornou nenhuma imagem.");
       }
 
-      const mimeType = imagePart.inlineData.mimeType ?? "image/png";
-      const extension = mimeType.split("/")[1] ?? "png";
+      const mimeType = "image/png";
+      const extension = "png";
       const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
+
 
       // Sobe a imagem pro Storage (bucket "tutor-images") em vez de
       // devolver base64 — assim o banco só guarda a URL, bem mais leve.
       const { error: uploadError } = await supabase.storage
         .from("tutor-images")
-        .upload(path, base64ToUint8Array(imagePart.inlineData.data), {
+        .upload(path, base64ToUint8Array(b64), {
           contentType: mimeType,
           upsert: false,
         });
