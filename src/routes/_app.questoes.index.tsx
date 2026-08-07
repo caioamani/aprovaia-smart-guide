@@ -22,15 +22,15 @@ export const Route = createFileRoute("/_app/questoes/")({
 
 function Questoes() {
   const questions = useQuestions();
+  const { isLoading } = useSupabaseQuestions();
   const [filters, setFilters] = useState<QuestionFiltersState>(emptyFilters);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(t);
-  }, []);
+  // Skeleton só enquanto os dados realmente estão vindo do banco — sem
+  // atraso artificial.
+  const loading = isLoading && questions.length === 0;
+
 
   const facets = useMemo(() => {
     const years = Array.from(new Set(questions.map((q) => q.year))).sort((a, b) => b - a);
