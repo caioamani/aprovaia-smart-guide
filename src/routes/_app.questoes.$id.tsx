@@ -53,16 +53,24 @@ function QuestionDetail() {
   );
 
   const index = useMemo(() => questions.findIndex((q) => q.id === id), [questions, id]);
-  // Se a questão atual não está no recorte filtrado (ex: alguém abriu um
-  // link direto de uma questão que não bate mais com o filtro salvo),
-  // procura ela na lista inteira só pra poder exibir o conteúdo — mas a
-  // navegação Anterior/Próxima continua baseada no recorte filtrado.
-  const q = index >= 0 ? questions[index] : allQuestions.find((it) => it.id === id);
+  // Item "leve" da listagem (sem contexto/alternativas) — serve pro
+  // cabeçalho e pra navegação Anterior/Próxima aparecerem na hora.
+  const listItem = index >= 0 ? questions[index] : allQuestions.find((it) => it.id === id);
+
+  // O conteúdo completo (contexto, imagens, alternativas) é buscado só desta
+  // questão, sob demanda — bem mais rápido que carregar tudo de uma vez.
+  const { data: full, isLoading: detailLoading } = useQuestionDetail(id);
+
+  const q = useMemo(() => {
+    if (!full) return listItem;
+    // Status/favorito vivem no store local, então preservamos.
+    return { ...full, status: listItem?.status ?? full.status, favorite: listItem?.favorite ?? false };
+  }, [full, listItem]);
 
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
+  const loading = detailLoading && !full;
 
   const [stats, setStats] = useState<SessionStatsData>({
     answered: 0,
@@ -78,14 +86,12 @@ function QuestionDetail() {
     answered && !!q,
   );
 
-  // simulated loading on question change
+  // Ao trocar de questão, limpa a seleção/resposta anterior.
   useEffect(() => {
-    setLoading(true);
     setSelected(null);
     setAnswered(false);
-    const t = setTimeout(() => setLoading(false), 400);
-    return () => clearTimeout(t);
   }, [id]);
+
 
   // stopwatch
   useEffect(() => {
