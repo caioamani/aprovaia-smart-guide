@@ -32,12 +32,15 @@ type SupabaseQuestionRow = {
   title: string | null;
   discipline: string | null;
   language: string | null;
-  context: string | null;
-  files: string[] | null;
+  // Colunas pesadas: só vêm na busca de UMA questão (tela de resolução).
+  // Na listagem elas são omitidas pra reduzir drasticamente o payload.
+  context?: string | null;
+  files?: string[] | null;
   alternatives_introduction: string | null;
-  alternatives: SupabaseAlternative[];
+  alternatives?: SupabaseAlternative[] | null;
   correct_alternative: string | null;
 };
+
 
 // Um bom número de imagens da API do ENEM aponta pra esse placeholder
 // genérico quando a imagem real não foi capturada — nesse caso específico
