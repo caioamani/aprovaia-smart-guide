@@ -188,7 +188,7 @@ function IATutor() {
                 key={m.id}
                 className={`flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 ${m.role === "user" ? "justify-end" : ""}`}
               >
-                {m.role === "ai" && <EloAvatar className="size-8" />}
+                {m.role === "ai" && <EloAvatar className="size-9" />}
                 <div
                   className={[
                     "px-5 py-3.5 rounded-2xl text-sm leading-relaxed max-w-[75%] whitespace-pre-wrap",
@@ -205,7 +205,7 @@ function IATutor() {
 
           {sendMessage.isPending && (
             <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <EloAvatar className="size-8" />
+              <EloAvatar className="size-9" />
               <div className="px-5 py-3.5 rounded-2xl rounded-tl-sm text-sm bg-surface ring-1 ring-hairline inline-flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="size-3.5 animate-spin" />
                 Pensando...
