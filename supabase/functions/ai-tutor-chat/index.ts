@@ -246,7 +246,7 @@ gerada.`;
       // devolver base64 — assim o banco só guarda a URL, bem mais leve.
       const { error: uploadError } = await supabase.storage
         .from("tutor-images")
-        .upload(path, base64ToUint8Array(imagePart.inlineData.data), {
+        .upload(path, base64ToUint8Array(b64), {
           contentType: mimeType,
           upsert: false,
         });
