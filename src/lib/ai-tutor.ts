@@ -109,6 +109,23 @@ export function formatTutorText(text: string): string {
     .trim();
 }
 
+/**
+ * Detecta se o conteúdo de uma mensagem da IA é uma imagem gerada — grava
+ * "IMG::<url>" na coluna content (ver IMAGE_PREFIX na Edge Function
+ * ai-tutor-chat) em vez do texto normal. A imagem em si mora no Storage
+ * (bucket "tutor-images"); o banco só guarda essa URL curta.
+ */
+const IMAGE_PREFIX = "IMG::";
+
+export function isTutorImageMessage(text: string): boolean {
+  return text.startsWith(IMAGE_PREFIX);
+}
+
+/** Extrai a URL da imagem a partir do conteúdo salvo ("IMG::<url>" -> "<url>"). */
+export function getTutorImageUrl(text: string): string {
+  return text.slice(IMAGE_PREFIX.length);
+}
+
 /** Monta a saudação inicial (substitui o texto fixo do mock). */
 export function buildGreeting(
   context: StudentContext | null | undefined,
@@ -190,6 +207,7 @@ export function useSendTutorMessage() {
       //    pra montar o contexto, então não precisamos duplicar isso aqui.
       const { data, error } = await supabase.functions.invoke<{
         reply?: string;
+        isImage?: boolean;
         error?: string;
       }>("ai-tutor-chat", {
         body: {
@@ -201,7 +219,9 @@ export function useSendTutorMessage() {
       if (error) throw error;
       if (!data?.reply) throw new Error(data?.error ?? "A IA não respondeu. Tenta de novo.");
 
-      // 3. Salva a resposta da IA pra manter o histórico persistente.
+      // 3. Salva a resposta da IA pra manter o histórico persistente. Se
+      //    for imagem, "reply" já vem como "IMG::<url curta>", não como
+      //    base64 — então isso continua leve mesmo persistindo sempre.
       const { error: insertAiError } = await supabase.from("ai_tutor_messages").insert({
         user_id: user.id,
         role: "ai",
@@ -209,7 +229,7 @@ export function useSendTutorMessage() {
       });
       if (insertAiError) throw insertAiError;
 
-      return data.reply;
+      return { reply: data.reply, isImage: Boolean(data.isImage) };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tutor-history", user?.id] });
