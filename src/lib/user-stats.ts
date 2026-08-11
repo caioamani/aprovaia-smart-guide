@@ -35,12 +35,14 @@ export type Granularity = "daily" | "weekly" | "monthly" | "yearly";
 
 export type TimelinePoint = { label: string; total: number; accuracy: number };
 export type AreaStat = { area: KnowledgeArea; correct: number; total: number };
+export type SubjectStat = { subject: string; correct: number; total: number };
 export type PeriodSummary = { total: number; accuracy: number };
 
 export type UserStats = {
   totalAnswered: number;
   accuracy: number;
   byArea: AreaStat[];
+  bySubject: SubjectStat[];
   timeline: TimelinePoint[];
   streakDays: number;
   current: PeriodSummary;
@@ -81,7 +83,11 @@ function buildBuckets(g: Granularity): { key: string; label: string; date: Date 
     const day = (now.getDay() + 6) % 7;
     const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
     for (let i = 11; i >= 0; i--) {
-      const d = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - i * 7);
+      const d = new Date(
+        thisMonday.getFullYear(),
+        thisMonday.getMonth(),
+        thisMonday.getDate() - i * 7,
+      );
       out.push({ key: bucketKey(d, g), label: `${d.getDate()}/${d.getMonth() + 1}`, date: d });
     }
   } else if (g === "monthly") {
@@ -117,7 +123,11 @@ function currentAndPreviousKeys(g: Granularity): {
   if (g === "weekly") {
     const day = (now.getDay() + 6) % 7;
     const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
-    const lastMonday = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - 7);
+    const lastMonday = new Date(
+      thisMonday.getFullYear(),
+      thisMonday.getMonth(),
+      thisMonday.getDate() - 7,
+    );
     return {
       current: bucketKey(thisMonday, g),
       previous: bucketKey(lastMonday, g),
@@ -152,6 +162,7 @@ export function useUserStats(granularity: Granularity = "monthly") {
     if (!answers || !questions) return null;
 
     const areaByQuestionId = new Map(questions.map((q) => [q.id, q.area]));
+    const subjectByQuestionId = new Map(questions.map((q) => [q.id, q.subject]));
 
     const totalAnswered = answers.length;
     const totalCorrect = answers.filter((a) => a.is_correct).length;
@@ -162,15 +173,26 @@ export function useUserStats(granularity: Granularity = "monthly") {
     for (const a of answers) latestByQuestion.set(a.question_id, a.is_correct);
 
     const byAreaMap = new Map<KnowledgeArea, { correct: number; total: number }>();
+    const bySubjectMap = new Map<string, { correct: number; total: number }>();
     for (const [qid, correct] of latestByQuestion) {
       const area = areaByQuestionId.get(qid);
-      if (!area) continue;
-      const entry = byAreaMap.get(area) ?? { correct: 0, total: 0 };
-      entry.total += 1;
-      if (correct) entry.correct += 1;
-      byAreaMap.set(area, entry);
+      if (area) {
+        const entry = byAreaMap.get(area) ?? { correct: 0, total: 0 };
+        entry.total += 1;
+        if (correct) entry.correct += 1;
+        byAreaMap.set(area, entry);
+      }
+
+      const subject = subjectByQuestionId.get(qid);
+      if (subject) {
+        const entry = bySubjectMap.get(subject) ?? { correct: 0, total: 0 };
+        entry.total += 1;
+        if (correct) entry.correct += 1;
+        bySubjectMap.set(subject, entry);
+      }
     }
     const byArea = Array.from(byAreaMap.entries()).map(([area, v]) => ({ area, ...v }));
+    const bySubject = Array.from(bySubjectMap.entries()).map(([subject, v]) => ({ subject, ...v }));
 
     // Série temporal por granularidade.
     const buckets = buildBuckets(granularity);
@@ -213,6 +235,7 @@ export function useUserStats(granularity: Granularity = "monthly") {
       totalAnswered,
       accuracy,
       byArea,
+      bySubject,
       timeline,
       streakDays,
       current: toSummary(current),
