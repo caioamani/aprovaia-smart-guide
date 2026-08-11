@@ -42,10 +42,12 @@ function Cronograma() {
 
       if (error) {
         // A function devolve { error } no corpo mesmo em status de erro.
-        const body = (error as { context?: Response }).context;
-        if (body) {
+        // error.context já é a Response da chamada — dá pra ler direto,
+        // sem precisar (nem poder, nesse ambiente) chamar .clone() nela.
+        const context = (error as { context?: Response }).context;
+        if (context) {
           try {
-            const parsed = await body.clone().json();
+            const parsed = await context.json();
             if (parsed?.error) throw new Error(parsed.error);
           } catch (e) {
             if (e instanceof Error && e.message) throw e;
