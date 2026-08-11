@@ -55,7 +55,9 @@ function Estatisticas() {
       <div className="p-8 max-w-[1400px] space-y-6">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Estatísticas</h1>
-          <p className="text-muted-foreground mt-2 text-sm">Sua evolução mensurada em tempo real.</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            Sua evolução mensurada em tempo real.
+          </p>
         </div>
         <div className="p-10 rounded-2xl bg-surface ring-1 ring-hairline text-center space-y-3">
           <p className="text-sm text-muted-foreground">
@@ -71,6 +73,7 @@ function Estatisticas() {
   }
 
   const areaOrder = stats.byArea.slice().sort((a, b) => b.total - a.total);
+  const subjectOrder = stats.bySubject.slice().sort((a, b) => b.total - a.total);
 
   return (
     <div className="p-8 space-y-6 max-w-[1400px] animate-fade-in">
@@ -232,6 +235,39 @@ function Estatisticas() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Acertos por matéria — granularidade maior que "por área" */}
+      <div className="rounded-2xl bg-surface ring-1 ring-hairline p-6">
+        <h3 className="font-semibold mb-1">Acertos vs. erros por matéria</h3>
+        <p className="text-xs text-muted-foreground mb-6">
+          Mais específico que a área do conhecimento — mostra exatamente onde focar.
+        </p>
+        {subjectOrder.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sem dados suficientes ainda.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            {subjectOrder.map((s) => {
+              const okPct = s.total === 0 ? 0 : Math.round((s.correct / s.total) * 100);
+              const errPct = 100 - okPct;
+              return (
+                <div key={s.subject}>
+                  <div className="flex justify-between text-xs mb-2">
+                    <span className="font-medium">{s.subject}</span>
+                    <span className="text-muted-foreground tabular-nums">
+                      <span className="text-emerald-400">{s.correct}</span> /{" "}
+                      <span className="text-red-400">{s.total - s.correct}</span>
+                    </span>
+                  </div>
+                  <div className="flex h-2 rounded-full overflow-hidden bg-white/5">
+                    <div className="bg-emerald-400" style={{ width: `${okPct}%` }} />
+                    <div className="bg-red-400/60" style={{ width: `${errPct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
