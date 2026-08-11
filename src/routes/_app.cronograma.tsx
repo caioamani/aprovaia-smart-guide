@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Sparkles, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { FunctionsHttpError, FunctionsFetchError, FunctionsRelayError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/cronograma")({
@@ -41,17 +42,27 @@ function Cronograma() {
       }>("generate-study-plan");
 
       if (error) {
-        // A function devolve { error } no corpo mesmo em status de erro.
-        // error.context já é a Response da chamada — dá pra ler direto,
-        // sem precisar (nem poder, nesse ambiente) chamar .clone() nela.
-        const context = (error as { context?: Response }).context;
-        if (context) {
+        // FunctionsHttpError: a function rodou e devolveu erro — o corpo
+        // real (com a mensagem { error: "..." }) vem em error.context.
+        if (error instanceof FunctionsHttpError) {
           try {
-            const parsed = await context.json();
+            const parsed = await error.context.json();
             if (parsed?.error) throw new Error(parsed.error);
           } catch (e) {
             if (e instanceof Error && e.message) throw e;
           }
+          throw new Error("A geração do cronograma falhou. Tente novamente.");
+        }
+        // FunctionsFetchError: a chamada nem chegou a completar — function
+        // não publicada, CORS, ou problema de rede. Aqui context é um erro
+        // de rede cru, sem .json()/.clone(), por isso o tratamento à parte.
+        if (error instanceof FunctionsFetchError) {
+          throw new Error(
+            "Não foi possível conectar à função de geração do cronograma. Verifique se ela está publicada no Supabase (Edge Functions).",
+          );
+        }
+        if (error instanceof FunctionsRelayError) {
+          throw new Error("Erro no relay do Supabase ao gerar o cronograma. Tente novamente em instantes.");
         }
         throw error;
       }
