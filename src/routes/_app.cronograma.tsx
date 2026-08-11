@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sparkles, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/cronograma")({
   component: Cronograma,
@@ -29,6 +32,40 @@ const blocks: {
 ];
 
 function Cronograma() {
+  const generatePlan = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke<{
+        planId?: string;
+        sessionsCreated?: number;
+        error?: string;
+      }>("generate-study-plan");
+
+      if (error) {
+        // A function devolve { error } no corpo mesmo em status de erro.
+        const body = (error as { context?: Response }).context;
+        if (body) {
+          try {
+            const parsed = await body.clone().json();
+            if (parsed?.error) throw new Error(parsed.error);
+          } catch (e) {
+            if (e instanceof Error && e.message) throw e;
+          }
+        }
+        throw error;
+      }
+      if (!data?.planId) {
+        throw new Error(data?.error ?? "Não foi possível gerar o cronograma.");
+      }
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(`Cronograma gerado com ${data.sessionsCreated} sessões.`);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Erro ao gerar o cronograma.");
+    },
+  });
+
   return (
     <div className="p-8 space-y-6 max-w-[1400px]">
       <div className="flex items-end justify-between">
@@ -48,12 +85,21 @@ function Cronograma() {
           <button className="px-3 py-2 rounded-lg bg-surface ring-1 ring-hairline hover:bg-white/5 transition">
             <ChevronRight className="size-4" />
           </button>
-          <button className="ml-2 px-4 py-2 rounded-lg bg-brand text-brand-foreground text-sm font-semibold inline-flex items-center gap-2 hover:bg-brand/90 transition">
-            <Sparkles className="size-3.5" />
-            Reorganizar
+          <button
+            onClick={() => generatePlan.mutate()}
+            disabled={generatePlan.isPending}
+            className="ml-2 px-4 py-2 rounded-lg bg-brand text-brand-foreground text-sm font-semibold inline-flex items-center gap-2 hover:bg-brand/90 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {generatePlan.isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="size-3.5" />
+            )}
+            {generatePlan.isPending ? "Gerando cronograma…" : "Gerar cronograma com IA"}
           </button>
         </div>
       </div>
+
 
       {/* Calendar */}
       <div className="rounded-2xl bg-surface ring-1 ring-hairline p-6 overflow-x-auto">
