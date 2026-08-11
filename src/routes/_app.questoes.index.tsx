@@ -33,12 +33,14 @@ function Questoes() {
   // atraso artificial.
   const loading = isLoading && questions.length === 0;
 
-
   const facets = useMemo(() => {
     const years = Array.from(new Set(questions.map((q) => q.year))).sort((a, b) => b - a);
     const areas = Array.from(new Set(questions.map((q) => q.area))) as KnowledgeArea[];
+    const subjects = Array.from(new Set(questions.map((q) => q.subject))).sort((a, b) =>
+      a.localeCompare(b, "pt-BR"),
+    );
     const languages: Language[] = ["Português", "Inglês", "Espanhol"];
-    return { years, areas, languages };
+    return { years, areas, subjects, languages };
   }, [questions]);
 
   const filtered = useMemo(
