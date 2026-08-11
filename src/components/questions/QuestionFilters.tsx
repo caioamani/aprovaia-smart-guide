@@ -90,12 +90,14 @@ export function QuestionFilters({
   setFilters,
   years,
   areas,
+  subjects,
   languages,
 }: {
   filters: QuestionFiltersState;
   setFilters: (f: QuestionFiltersState) => void;
   years: number[];
   areas: KnowledgeArea[];
+  subjects: string[];
   languages: Language[];
 }) {
   const toggle = <K extends keyof QuestionFiltersState>(
@@ -141,6 +143,17 @@ export function QuestionFilters({
             label={a.replace(" e suas Tecnologias", "")}
             active={filters.areas.includes(a)}
             onToggle={() => toggle("areas", a)}
+          />
+        ))}
+      </Section>
+
+      <Section title="Matéria">
+        {subjects.map((s) => (
+          <CheckPill
+            key={s}
+            label={s}
+            active={filters.subjects.includes(s)}
+            onToggle={() => toggle("subjects", s)}
           />
         ))}
       </Section>
