@@ -41,7 +41,6 @@ type SupabaseQuestionRow = {
   correct_alternative: string | null;
 };
 
-
 // Um bom número de imagens da API do ENEM aponta pra esse placeholder
 // genérico quando a imagem real não foi capturada — nesse caso específico
 // não tem o que mostrar, então tratamos como "sem imagem".
@@ -60,26 +59,30 @@ function realImagesOnly(urls: (string | null | undefined)[]): string[] {
 // alternative.image) e renderizadas como <img>, não como texto.
 function cleanQuestionText(text: string | null | undefined): string {
   if (!text) return "";
-  return text
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-    // Negrito/itálico em markdown -> mantém só o texto, sem os asteriscos
-    // nem os underscores.
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    .replace(/\*(.*?)\*/g, "$1")
-    .replace(/_(.*?)_/g, "$1")
-    // Colchetes escapados que sobram em algumas provas mais antigas.
-    .replace(/\\\[/g, "[")
-    .replace(/\\\]/g, "]")
-    // Várias linhas em branco seguidas (que sobram depois de remover as
-    // imagens) viram só uma.
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return (
+    text
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+      // Negrito/itálico em markdown -> mantém só o texto, sem os asteriscos
+      // nem os underscores.
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/_(.*?)_/g, "$1")
+      // Colchetes escapados que sobram em algumas provas mais antigas.
+      .replace(/\\\[/g, "[")
+      .replace(/\\\]/g, "]")
+      // Várias linhas em branco seguidas (que sobram depois de remover as
+      // imagens) viram só uma.
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+  );
 }
 
 // Divide o contexto cru em blocos de texto/imagem preservando a ordem
 // original — assim a imagem que vem no meio do texto (ex: entre "Texto I"
 // e a legenda da obra) aparece exatamente onde o enunciado colocou.
-function buildContextBlocks(raw: string | null | undefined): import("./mock-questions").ContextBlock[] | undefined {
+function buildContextBlocks(
+  raw: string | null | undefined,
+): import("./mock-questions").ContextBlock[] | undefined {
   if (!raw) return undefined;
   const blocks: import("./mock-questions").ContextBlock[] = [];
   const imgRegex = /!\[[^\]]*\]\(([^)]+)\)/g;
@@ -102,13 +105,16 @@ function buildContextBlocks(raw: string | null | undefined): import("./mock-ques
   return blocks;
 }
 
-function mapRowToQuestion(row: SupabaseQuestionRow): Question {
+function mapRowToQuestion(row: SupabaseQuestionRow, subjectName?: string): Question {
   return {
     id: row.id,
     number: row.index,
     year: row.exam_year,
     area: disciplineToArea[row.discipline ?? ""] ?? "Linguagens e Códigos",
-    subject: row.discipline ?? "Geral",
+    // Prioriza a matéria real (tabela subjects, via question_subjects) —
+    // ex: "Física", "História" — caindo pro discipline cru só pra questões
+    // que por algum motivo ainda não foram classificadas.
+    subject: subjectName ?? row.discipline ?? "Geral",
     topic: cleanQuestionText(row.title),
     language: languageMap[row.language ?? ""] ?? "Português",
     context: cleanQuestionText(row.context),
@@ -134,6 +140,51 @@ function mapRowToQuestion(row: SupabaseQuestionRow): Question {
 
 const PAGE_SIZE = 1000; // limite padrão de linhas por requisição do Supabase
 
+// Busca a matéria real de cada questão (tabela question_subjects + subjects,
+// preenchida pelo script de classificação). Paginado porque já passa de
+// 1000 linhas. Se uma questão tiver mais de uma matéria marcada, usa a
+// marcada como is_primary.
+type QuestionSubjectRow = {
+  question_id: string;
+  is_primary: boolean;
+  subjects: { name: string } | null;
+};
+
+async function fetchQuestionSubjectMap(): Promise<Map<string, string>> {
+  const { count, error: countError } = await supabase
+    .from("question_subjects")
+    .select("id", { count: "exact", head: true });
+
+  if (countError) throw countError;
+
+  const total = count ?? 0;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const results = await Promise.all(
+    Array.from({ length: pages }, (_, i) =>
+      supabase
+        .from("question_subjects")
+        .select("question_id, is_primary, subjects(name)")
+        .range(i * PAGE_SIZE, i * PAGE_SIZE + PAGE_SIZE - 1),
+    ),
+  );
+
+  const map = new Map<string, string>();
+  for (const { data, error } of results) {
+    if (error) throw error;
+    for (const row of (data ?? []) as unknown as QuestionSubjectRow[]) {
+      const name = row.subjects?.name;
+      if (!name) continue;
+      // Só sobrescreve se ainda não tem nada, ou se essa linha é a
+      // marcada como principal (cobre o raro caso de mais de uma matéria).
+      if (row.is_primary || !map.has(row.question_id)) {
+        map.set(row.question_id, name);
+      }
+    }
+  }
+  return map;
+}
+
 // Colunas leves — o suficiente pra montar a listagem/filtros. Sem "context",
 // "files" e "alternatives" (que são o grosso do payload) a lista carrega
 // muito mais rápido.
@@ -154,24 +205,29 @@ async function fetchQuestions(): Promise<Question[]> {
   const total = count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const results = await Promise.all(
-    Array.from({ length: pages }, (_, i) =>
-      supabase
-        .from("questions")
-        .select(LIST_COLUMNS)
-        .order("exam_year", { ascending: false })
-        .order("index", { ascending: true })
-        .range(i * PAGE_SIZE, i * PAGE_SIZE + PAGE_SIZE - 1),
+  const [pageResults, subjectMap] = await Promise.all([
+    Promise.all(
+      Array.from({ length: pages }, (_, i) =>
+        supabase
+          .from("questions")
+          .select(LIST_COLUMNS)
+          .order("exam_year", { ascending: false })
+          .order("index", { ascending: true })
+          .range(i * PAGE_SIZE, i * PAGE_SIZE + PAGE_SIZE - 1),
+      ),
     ),
-  );
+    fetchQuestionSubjectMap(),
+  ]);
 
   const allRows: SupabaseQuestionRow[] = [];
-  for (const { data, error } of results) {
+  for (const { data, error } of pageResults) {
     if (error) throw error;
     allRows.push(...((data ?? []) as unknown as SupabaseQuestionRow[]));
   }
 
-  return allRows.map(mapRowToQuestion).map(applyQuestionOverrides);
+  return allRows
+    .map((row) => mapRowToQuestion(row, subjectMap.get(row.id)))
+    .map(applyQuestionOverrides);
 }
 
 export function useSupabaseQuestions() {
@@ -188,15 +244,22 @@ export function useSupabaseQuestions() {
 // Busca UMA questão completa (contexto, imagens e alternativas) — usada só
 // na tela de resolução, sob demanda.
 async function fetchQuestionById(id: string): Promise<Question | null> {
-  const { data, error } = await supabase
-    .from("questions")
-    .select(FULL_COLUMNS)
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data, error }, { data: subjectRow }] = await Promise.all([
+    supabase.from("questions").select(FULL_COLUMNS).eq("id", id).maybeSingle(),
+    supabase
+      .from("question_subjects")
+      .select("subjects(name)")
+      .eq("question_id", id)
+      .eq("is_primary", true)
+      .maybeSingle(),
+  ]);
 
   if (error) throw error;
   if (!data) return null;
-  return applyQuestionOverrides(mapRowToQuestion(data as unknown as SupabaseQuestionRow));
+  const subjectName = (subjectRow as { subjects?: { name: string } } | null)?.subjects?.name;
+  return applyQuestionOverrides(
+    mapRowToQuestion(data as unknown as SupabaseQuestionRow, subjectName),
+  );
 }
 
 export function useQuestionDetail(id: string) {
@@ -209,8 +272,6 @@ export function useQuestionDetail(id: string) {
     refetchOnWindowFocus: false,
   });
 }
-
-
 
 // ---------------------------------------------------------------------
 // Respostas do usuário (tabela user_answers)
