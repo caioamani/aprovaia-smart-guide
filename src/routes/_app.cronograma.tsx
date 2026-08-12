@@ -17,10 +17,22 @@ export const Route = createFileRoute("/_app/cronograma")({
 });
 
 const DAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
-const HOURS = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
-const HOUR_STEP_MIN = 120; // cada linha da grade representa um bloco de 2h
+// Faixa de horas exibida na grade — precisa cobrir cedo (quem estuda de
+// manhã) e tarde da noite (quem estuda depois da escola/trabalho, caso
+// mais comum). Se algum dia a IA agendar fora disso, o clamp em
+// minutesFromRangeStart ainda evita quebrar o layout, só empurra pro
+// extremo mais próximo.
+const DAY_START_HOUR = 6;
+const DAY_END_HOUR = 23;
+const TOTAL_MINUTES = (DAY_END_HOUR - DAY_START_HOUR) * 60;
+const PX_PER_HOUR = 64; // 4rem por hora, mesma escala visual de antes
+const GRID_HEIGHT_PX = (DAY_END_HOUR - DAY_START_HOUR) * PX_PER_HOUR;
+const HOUR_TICKS = Array.from(
+  { length: DAY_END_HOUR - DAY_START_HOUR + 1 },
+  (_, i) => DAY_START_HOUR + i,
+);
 
-// Paleta cíclica por matéria — não temos uma cor "oficial" por matéria no
+// Paleta cíclica por matéria — não temos cor "oficial" por matéria no
 // banco, então distribuímos por índice, de forma estável (mesma matéria
 // sempre cai na mesma cor dentro de uma sessão de uso).
 const PALETTE = [
@@ -45,6 +57,13 @@ type StudySessionRow = {
   subjects: { name: string; slug: string } | null;
 };
 
+type PositionedSession = StudySessionRow & {
+  topPx: number;
+  heightPx: number;
+  lane: number;
+  laneCount: number;
+};
+
 function mondayOf(date: Date): Date {
   const d = new Date(date);
   const day = (d.getDay() + 6) % 7; // 0 = segunda
@@ -66,16 +85,61 @@ function formatRange(start: Date, end: Date): string {
     : `${startStr} de ${start.toLocaleDateString("pt-BR", { month: "long" })} a ${endStr}`;
 }
 
-function hourIndexFor(time: string): number {
-  const [h] = time.split(":").map(Number);
-  // encaixa no slot de 2h mais próximo, sem passar do último
-  const idx = Math.floor((h - 8) / 2);
-  return Math.min(HOURS.length - 1, Math.max(0, idx));
+function minutesSinceRangeStart(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  const total = (h - DAY_START_HOUR) * 60 + (m || 0);
+  return Math.min(TOTAL_MINUTES, Math.max(0, total));
 }
 
 function subjectColor(slug: string, order: string[]): string {
   const i = order.indexOf(slug);
-  return PALETTE[i % PALETTE.length];
+  return PALETTE[Math.max(0, i) % PALETTE.length];
+}
+
+// Calcula posição vertical real (em px, proporcional ao horário) de cada
+// sessão do dia, e separa em "raias" (lanes) lado a lado quando duas
+// sessões se sobrepõem no tempo — em vez de empilhar uma em cima da
+// outra, o que ficava ilegível.
+function layoutDaySessions(daySessions: StudySessionRow[]): PositionedSession[] {
+  const withTime = daySessions
+    .map((s) => {
+      const startMin = minutesSinceRangeStart(s.scheduled_time);
+      const durMin = Math.max(20, s.duration_minutes || 60);
+      const topPx = (startMin / TOTAL_MINUTES) * GRID_HEIGHT_PX;
+      const heightPx = Math.max(28, (durMin / TOTAL_MINUTES) * GRID_HEIGHT_PX - 4);
+      return { ...s, startMin, endMin: startMin + durMin, topPx, heightPx };
+    })
+    .sort((a, b) => a.startMin - b.startMin);
+
+  // Agrupa sessões que se sobrepõem no tempo em "clusters", e dentro de
+  // cada cluster distribui em raias (lane 0, 1, 2...) — todas as sessões
+  // do cluster dividem a largura igualmente entre o número de raias.
+  const result: PositionedSession[] = [];
+  let cluster: (typeof withTime)[number][] = [];
+  let clusterEnd = -Infinity;
+
+  const flushCluster = () => {
+    if (cluster.length === 0) return;
+    const laneCount = cluster.length;
+    cluster.forEach((s, lane) => {
+      result.push({ ...s, lane, laneCount });
+    });
+    cluster = [];
+  };
+
+  for (const s of withTime) {
+    if (cluster.length === 0 || s.startMin < clusterEnd) {
+      cluster.push(s);
+      clusterEnd = Math.max(clusterEnd, s.endMin);
+    } else {
+      flushCluster();
+      cluster.push(s);
+      clusterEnd = s.endMin;
+    }
+  }
+  flushCluster();
+
+  return result;
 }
 
 function Cronograma() {
@@ -141,6 +205,18 @@ function Cronograma() {
     return Array.from(seen);
   }, [sessions]);
 
+  const sessionsByDay = useMemo(() => {
+    const map = new Map<string, PositionedSession[]>();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      const iso = toISODate(d);
+      const daySessions = (sessions ?? []).filter((s) => s.scheduled_date === iso);
+      map.set(iso, layoutDaySessions(daySessions));
+    }
+    return map;
+  }, [sessions, weekStart]);
+
   const generatePlan = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke<{
@@ -183,9 +259,6 @@ function Cronograma() {
     },
     onSuccess: (data) => {
       toast.success(`Cronograma gerado com ${data.sessionsCreated} sessões.`);
-      // Invalida tudo que depende de study_plans/study_sessions, incluindo
-      // a semana atual sendo exibida, pra já mostrar o resultado sem
-      // precisar dar refresh manual.
       queryClient.invalidateQueries({ queryKey: ["study-sessions"] });
       queryClient.invalidateQueries({ queryKey: ["has-active-study-plan"] });
     },
@@ -249,7 +322,7 @@ function Cronograma() {
 
       {/* Calendar */}
       <div className="rounded-2xl bg-surface ring-1 ring-hairline p-6 overflow-x-auto">
-        <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] gap-2 min-w-[900px]">
+        <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] gap-2 min-w-[900px]">
           <div />
           {DAY_LABELS.map((label, i) => {
             const d = new Date(weekStart);
@@ -267,53 +340,72 @@ function Cronograma() {
             );
           })}
 
-          {HOURS.map((h, hi) => (
-            <div key={h} className="contents">
-              <div className="text-[10px] font-mono text-muted-foreground pt-2">{h}</div>
-              {DAY_LABELS.map((_, di) => {
-                const d = new Date(weekStart);
-                d.setDate(d.getDate() + di);
-                const dateISO = toISODate(d);
-                const daySessions = (sessions ?? []).filter(
-                  (s) => s.scheduled_date === dateISO && hourIndexFor(s.scheduled_time) === hi,
-                );
-                return (
-                  <div key={di} className="relative h-16 border-t border-hairline">
-                    {daySessions.map((s, si) => {
-                      const span = Math.max(1, Math.round(s.duration_minutes / HOUR_STEP_MIN));
-                      const slug = s.subjects?.slug ?? "geral";
-                      return (
-                        <div
-                          key={s.id}
-                          onClick={() =>
-                            slug !== "geral" &&
-                            navigate({ to: "/questoes", search: { subject: s.subjects?.name } })
-                          }
-                          className={[
-                            "absolute inset-x-0 top-1 rounded-lg p-2 ring-1 cursor-pointer transition hover:brightness-110",
-                            subjectColor(slug, subjectOrder),
-                            s.status === "done" ? "opacity-50" : "",
-                          ].join(" ")}
-                          style={{
-                            height: `${span * 4 - 0.5}rem`,
-                            left: si > 0 ? `${si * 6}px` : undefined,
-                          }}
-                          title={s.objective}
-                        >
-                          <p className="text-[9px] font-mono uppercase tracking-widest opacity-80">
-                            {s.subjects?.name ?? "Geral"}
-                          </p>
-                          <p className="text-xs font-semibold mt-0.5 leading-tight line-clamp-2">
-                            {s.kind}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+          {/* Coluna de horas — só rótulos, não guia mais o encaixe das sessões */}
+          <div className="relative" style={{ height: GRID_HEIGHT_PX }}>
+            {HOUR_TICKS.map((h) => (
+              <div
+                key={h}
+                className="absolute left-0 text-[10px] font-mono text-muted-foreground -translate-y-1/2"
+                style={{ top: (h - DAY_START_HOUR) * PX_PER_HOUR }}
+              >
+                {String(h).padStart(2, "0")}:00
+              </div>
+            ))}
+          </div>
+
+          {DAY_LABELS.map((_, di) => {
+            const d = new Date(weekStart);
+            d.setDate(d.getDate() + di);
+            const dateISO = toISODate(d);
+            const daySessions = sessionsByDay.get(dateISO) ?? [];
+            return (
+              <div
+                key={di}
+                className="relative border-l border-hairline"
+                style={{ height: GRID_HEIGHT_PX }}
+              >
+                {HOUR_TICKS.map((h) => (
+                  <div
+                    key={h}
+                    className="absolute inset-x-0 border-t border-hairline/60"
+                    style={{ top: (h - DAY_START_HOUR) * PX_PER_HOUR }}
+                  />
+                ))}
+                {daySessions.map((s) => {
+                  const slug = s.subjects?.slug ?? "geral";
+                  const widthPct = 100 / s.laneCount;
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() =>
+                        slug !== "geral" &&
+                        navigate({ to: "/questoes", search: { subject: s.subjects?.name } })
+                      }
+                      className={[
+                        "absolute rounded-lg p-2 ring-1 cursor-pointer transition hover:brightness-110 overflow-hidden",
+                        subjectColor(slug, subjectOrder),
+                        s.status === "done" ? "opacity-50" : "",
+                      ].join(" ")}
+                      style={{
+                        top: s.topPx,
+                        height: s.heightPx,
+                        left: `calc(${s.lane * widthPct}% + 2px)`,
+                        width: `calc(${widthPct}% - 4px)`,
+                      }}
+                      title={`${s.objective} (${s.scheduled_time.slice(0, 5)})`}
+                    >
+                      <p className="text-[9px] font-mono uppercase tracking-widest opacity-80 truncate">
+                        {s.subjects?.name ?? "Geral"}
+                      </p>
+                      <p className="text-xs font-semibold mt-0.5 leading-tight line-clamp-2">
+                        {s.kind}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
