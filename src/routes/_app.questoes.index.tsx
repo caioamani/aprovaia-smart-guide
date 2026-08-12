@@ -17,15 +17,23 @@ import type { KnowledgeArea, Language } from "@/lib/mock-questions";
 
 const PAGE_SIZE = 20;
 
+type QuestoesSearch = { subject?: string };
+
 export const Route = createFileRoute("/_app/questoes/")({
   component: Questoes,
+  validateSearch: (search: Record<string, unknown>): QuestoesSearch => ({
+    subject: typeof search.subject === "string" ? search.subject : undefined,
+  }),
   head: () => ({ meta: [{ title: "Questões · AprovaIA" }] }),
 });
 
 function Questoes() {
   const questions = useQuestions();
   const { isLoading } = useSupabaseQuestions();
-  const [filters, setFilters] = useState<QuestionFiltersState>(emptyFilters);
+  const { subject: subjectFromUrl } = Route.useSearch();
+  const [filters, setFilters] = useState<QuestionFiltersState>(() =>
+    subjectFromUrl ? { ...emptyFilters, subjects: [subjectFromUrl] } : emptyFilters,
+  );
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
