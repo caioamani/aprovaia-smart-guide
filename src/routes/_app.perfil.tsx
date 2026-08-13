@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Crown, Edit3, Target, Clock, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { StudyPreferencesDialog } from "@/components/StudyPreferencesDialog";
 
 export const Route = createFileRoute("/_app/perfil")({
   component: Perfil,
@@ -10,6 +12,7 @@ export const Route = createFileRoute("/_app/perfil")({
 function Perfil() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [prefsOpen, setPrefsOpen] = useState(false);
 
   async function handleSignOut() {
     await signOut();
@@ -72,7 +75,11 @@ function Perfil() {
       <div className="rounded-2xl bg-surface ring-1 ring-hairline divide-y divide-hairline">
         {[
           { label: "Editar questionário", desc: "Refaça o onboarding para ajustar seu plano" },
-          { label: "Preferências de estudo", desc: "Horários, notificações e ritmo" },
+          {
+            label: "Preferências de estudo",
+            desc: "Horários, notificações e ritmo",
+            onClick: () => setPrefsOpen(true),
+          },
           { label: "Editar perfil", desc: "Nome, e-mail e foto" },
           { label: "Plano Premium", desc: "Ver benefícios ativos", to: "/premium" },
           { label: "Configurações", desc: "Tema, idioma, privacidade", to: "/configuracoes" },
@@ -92,6 +99,7 @@ function Perfil() {
           ) : (
             <button
               key={s.label}
+              onClick={s.onClick}
               className="w-full text-left p-5 flex items-center justify-between hover:bg-white/[0.02] transition"
             >
               <div>
@@ -103,6 +111,8 @@ function Perfil() {
           ),
         )}
       </div>
+
+      <StudyPreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
 
       <button
         onClick={handleSignOut}
