@@ -32,19 +32,10 @@ const HOUR_TICKS = Array.from(
   (_, i) => DAY_START_HOUR + i,
 );
 
-// Paleta cíclica por matéria — não temos cor "oficial" por matéria no
-// banco, então distribuímos por índice, de forma estável (mesma matéria
-// sempre cai na mesma cor dentro de uma sessão de uso).
-const PALETTE = [
-  "bg-brand/15 ring-brand/30 text-brand",
-  "bg-fuchsia-500/15 ring-fuchsia-500/30 text-fuchsia-300",
-  "bg-orange-500/15 ring-orange-500/30 text-orange-300",
-  "bg-indigo-500/15 ring-indigo-500/30 text-indigo-300",
-  "bg-emerald-500/15 ring-emerald-500/30 text-emerald-300",
-  "bg-cyan-500/15 ring-cyan-500/30 text-cyan-300",
-  "bg-lime-500/15 ring-lime-500/30 text-lime-300",
-  "bg-rose-500/15 ring-rose-500/30 text-rose-300",
-];
+// Estilo único e neutro para todos os cards de sessão — antes havia uma
+// paleta cíclica com uma cor diferente por matéria; foi removida a pedido,
+// então todo card usa a mesma aparência (ring/bg neutros).
+const CARD_STYLE = "bg-surface ring-hairline text-foreground";
 
 type StudySessionRow = {
   id: string;
@@ -89,11 +80,6 @@ function minutesSinceRangeStart(time: string): number {
   const [h, m] = time.split(":").map(Number);
   const total = (h - DAY_START_HOUR) * 60 + (m || 0);
   return Math.min(TOTAL_MINUTES, Math.max(0, total));
-}
-
-function subjectColor(slug: string, order: string[]): string {
-  const i = order.indexOf(slug);
-  return PALETTE[Math.max(0, i) % PALETTE.length];
 }
 
 // Calcula posição vertical real (em px, proporcional ao horário) de cada
@@ -195,15 +181,6 @@ function Cronograma() {
       return !!data;
     },
   });
-
-  const subjectOrder = useMemo(() => {
-    const seen = new Set<string>();
-    for (const s of sessions ?? []) {
-      const slug = s.subjects?.slug;
-      if (slug) seen.add(slug);
-    }
-    return Array.from(seen);
-  }, [sessions]);
 
   const sessionsByDay = useMemo(() => {
     const map = new Map<string, PositionedSession[]>();
@@ -383,7 +360,7 @@ function Cronograma() {
                       }
                       className={[
                         "absolute rounded-lg p-2 ring-1 cursor-pointer transition hover:brightness-110 overflow-hidden",
-                        subjectColor(slug, subjectOrder),
+                        CARD_STYLE,
                         s.status === "done" ? "opacity-50" : "",
                       ].join(" ")}
                       style={{
