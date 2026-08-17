@@ -17,6 +17,23 @@ export type SessionEditorInitial = {
   durationMinutes: number;
 };
 
+function toMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+/** Duas sessões se sobrepõem se um intervalo começa antes do outro terminar. */
+function intervalsOverlap(
+  aStart: number,
+  aDuration: number,
+  bStart: number,
+  bDuration: number,
+): boolean {
+  const aEnd = aStart + aDuration;
+  const bEnd = bStart + bDuration;
+  return aStart < bEnd && bStart < aEnd;
+}
+
 export function StudySessionEditorDialog({
   open,
   onOpenChange,
@@ -73,6 +90,32 @@ export function StudySessionEditorDialog({
       if (!user) throw new Error("Não autenticado.");
       if (!subjectId) throw new Error("Escolha uma matéria.");
       const subject = subjects?.find((s) => s.id === subjectId);
+
+      // Impede duas sessões com horário sobreposto no mesmo dia — busca as
+      // outras sessões já marcadas nesse dia (exclui a própria, se estiver
+      // editando) e confere se o novo intervalo esbarra em alguma.
+      const { data: sameDay, error: sameDayError } = await supabase
+        .from("study_sessions")
+        .select("id, scheduled_time, duration_minutes")
+        .eq("user_id", user.id)
+        .eq("scheduled_date", date);
+      if (sameDayError) throw sameDayError;
+
+      const newStart = toMinutes(time);
+      const conflict = (sameDay ?? []).find((s) => {
+        if (isEdit && initial && s.id === initial.id) return false;
+        return intervalsOverlap(
+          newStart,
+          duration,
+          toMinutes(s.scheduled_time.slice(0, 5)),
+          s.duration_minutes,
+        );
+      });
+      if (conflict) {
+        throw new Error(
+          `Já existe uma sessão nesse horário (${conflict.scheduled_time.slice(0, 5)}). Escolha outro horário ou ajuste a duração.`,
+        );
+      }
 
       if (isEdit && initial) {
         const { error } = await supabase
