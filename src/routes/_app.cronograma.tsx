@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Sparkles, ChevronLeft, ChevronRight, Loader2, Plus } from "lucide-react";
+import { Sparkles, ChevronLeft, ChevronRight, Loader2, Plus, Eraser } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -14,6 +14,7 @@ import {
   StudySessionEditorDialog,
   type SessionEditorInitial,
 } from "@/components/StudySessionEditorDialog";
+import { ClearScheduleDialog } from "@/components/ClearScheduleDialog";
 
 export const Route = createFileRoute("/_app/cronograma")({
   component: Cronograma,
@@ -163,6 +164,7 @@ function Cronograma() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<SessionEditorInitial | null>(null);
   const [createDate, setCreateDate] = useState<string | undefined>(undefined);
+  const [clearOpen, setClearOpen] = useState(false);
 
   const weekStart = useMemo(() => {
     const base = mondayOf(new Date());
@@ -331,6 +333,13 @@ function Cronograma() {
             Adicionar sessão
           </button>
           <button
+            onClick={() => setClearOpen(true)}
+            className="px-4 py-2 rounded-lg bg-surface ring-1 ring-hairline text-sm font-medium inline-flex items-center gap-2 hover:bg-red-500/10 hover:text-red-400 hover:ring-red-500/30 transition"
+          >
+            <Eraser className="size-3.5" />
+            Limpar cronograma
+          </button>
+          <button
             onClick={() => generatePlan.mutate()}
             disabled={generatePlan.isPending}
             className="px-4 py-2 rounded-lg bg-brand text-brand-foreground text-sm font-semibold inline-flex items-center gap-2 hover:bg-brand/90 transition disabled:opacity-60 disabled:cursor-not-allowed"
@@ -447,6 +456,7 @@ function Cronograma() {
         initial={editing}
         defaultDate={createDate}
       />
+      <ClearScheduleDialog open={clearOpen} onOpenChange={setClearOpen} />
     </div>
   );
 }
