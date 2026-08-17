@@ -72,6 +72,23 @@ type StudyDay = {
   slotEnd: string;
 };
 
+function toMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+/** Duas sessões se sobrepõem se um intervalo começa antes do outro terminar. */
+function intervalsOverlap(
+  aStart: number,
+  aDuration: number,
+  bStart: number,
+  bDuration: number,
+): boolean {
+  const aEnd = aStart + aDuration;
+  const bEnd = bStart + bDuration;
+  return aStart < bEnd && bStart < aEnd;
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -326,6 +343,7 @@ ${slugList}
 Regras obrigatórias:
 - Dê mais sessões para as matérias com pior desempenho (topo da lista de desempenho), mas cubra as 4 áreas do ENEM ao longo do período. Nenhuma área deve ficar totalmente de fora.
 - No máximo ${paceCfg.sessionsPerDay} sessão(ões) por dia listado acima. Nem todo dia precisa ter o máximo.
+- Dentro de um mesmo dia, as sessões NUNCA podem se sobrepor no horário — a próxima sessão só pode começar depois que a anterior termina (scheduled_time + duration_minutes).
 - duration_minutes entre ${paceCfg.minDuration} e ${paceCfg.maxDuration}.
 - scheduled_time no formato "HH:MM", dentro da janela de cada dia.
 - kind: algo como "Teoria + exercícios", "Revisão" ou "Simulado".
@@ -374,6 +392,7 @@ Responda SOMENTE com JSON puro no formato:
     // ------------------------------------------------------------------
     const dayInfo = new Map(studyDays.map((d) => [d.offset, d]));
     const perDay = new Map<number, number>();
+    const acceptedByDay = new Map<number, { start: number; duration: number }[]>();
     const valid: (AiSession & { subject_id: string; order_index: number })[] = [];
 
     for (const s of parsed.sessions ?? []) {
@@ -401,6 +420,17 @@ Responda SOMENTE com JSON puro no formato:
         time = info.slotStart;
       }
 
+      // Nunca aceita duas sessões com horário sobreposto no mesmo dia —
+      // se a IA sugeriu um horário que esbarra em outra sessão já aceita
+      // pra esse dia, descarta essa sessão em vez de ajustar o horário
+      // (ajustar poderia empurrar pra fora da janela de disponibilidade).
+      const startMin = toMinutes(time);
+      const dayAccepted = acceptedByDay.get(day) ?? [];
+      const overlaps = dayAccepted.some((a) =>
+        intervalsOverlap(startMin, duration, a.start, a.duration),
+      );
+      if (overlaps) continue;
+
       const objective = String(s?.objective ?? "").trim();
       const kind = String(s?.kind ?? "").trim() || "Teoria + exercícios";
       const content = Array.isArray(s?.content)
@@ -410,6 +440,8 @@ Responda SOMENTE com JSON puro no formato:
       if (!objective || content.length < 2) continue;
 
       perDay.set(day, used + 1);
+      dayAccepted.push({ start: startMin, duration });
+      acceptedByDay.set(day, dayAccepted);
       valid.push({
         day,
         subject_slug: subject.slug,
