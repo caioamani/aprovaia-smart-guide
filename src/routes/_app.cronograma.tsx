@@ -231,8 +231,13 @@ function Cronograma() {
       const { data, error } = await supabase.functions.invoke<{
         planId?: string;
         sessionsCreated?: number;
+        weekStart?: string;
         error?: string;
-      }>("generate-study-plan");
+      }>("generate-study-plan", {
+        // Gera só a semana que está sendo visualizada — a IA foca melhor
+        // em 7 dias do que em 30.
+        body: { weekStart: toISODate(weekStart) },
+      });
 
       if (error) {
         // FunctionsHttpError: a function rodou e devolveu erro — o corpo
