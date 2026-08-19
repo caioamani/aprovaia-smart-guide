@@ -272,7 +272,7 @@ function Cronograma() {
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`Cronograma gerado com ${data.sessionsCreated} sessões.`);
+      toast.success(`Semana gerada com ${data.sessionsCreated} sessões.`);
       queryClient.invalidateQueries({ queryKey: ["study-sessions"] });
       queryClient.invalidateQueries({ queryKey: ["has-active-study-plan"] });
     },
